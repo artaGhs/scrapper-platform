@@ -434,8 +434,9 @@ export default function Home() {
               <span>You can help.</span>
             </h1>
             <p className="intro-copy">
-              Find conversations where people ask for what your business offers.
-              Describe it, review the fit, and decide where to join in.
+              Find Reddit conversations about the problem your business solves.
+              Describe it, review the original words, and decide where to join
+              in.
             </p>
             <div className="intro-note">
               <svg
@@ -461,7 +462,7 @@ export default function Home() {
             </div>
             <form onSubmit={run}>
               <label htmlFor="description" className="field-label">
-                What do you offer, and who is it for?
+                Tell us what your business does
               </label>
               <textarea
                 id="description"
@@ -551,7 +552,7 @@ export default function Home() {
                   disabled={busy || !ready || description.trim().length < 20}
                   type="submit"
                 >
-                  {busy ? "Working" : "Run search"}
+                  {busy ? "Working" : "Run research"}
                   {busy ? (
                     <span className="button-spinner" aria-hidden="true" />
                   ) : (
@@ -722,7 +723,7 @@ export default function Home() {
                       {scan.stage === "failed"
                         ? "This search couldn’t finish."
                         : scan.results.length
-                          ? `${scan.results.length} ${scan.mode === "sample" ? "examples" : "matches"} worth a closer look.`
+                          ? `${scan.results.length} ${scan.mode === "sample" ? (scan.results.length === 1 ? "example" : "examples") : scan.results.length === 1 ? "match" : "matches"} worth a closer look.`
                           : scan.stage === "partial"
                             ? "Search finished with gaps."
                             : "No strong matches this time."}
@@ -777,6 +778,39 @@ export default function Home() {
                     pending={pendingFeedback}
                   />
                 ))}
+                {(scan.lockedCount || 0) > 0 && filter === "all" && (
+                  <section
+                    className="report-preview"
+                    aria-label="Additional results preview"
+                  >
+                    <h3>
+                      {scan.matchCount} matches found. Your first three are
+                      above.
+                    </h3>
+                    <p>
+                      {scan.lockedCount} additional{" "}
+                      {scan.lockedCount === 1 ? "match is" : "matches are"}{" "}
+                      retained in this research report. Full-report access is
+                      planned; payments and unlocking are not available in this
+                      pilot.
+                    </p>
+                    <div className="locked-previews" aria-hidden="true">
+                      {Array.from(
+                        { length: Math.min(3, scan.lockedCount || 0) },
+                        (_, index) => (
+                          <div className="locked-preview" key={index}>
+                            <span />
+                            <span />
+                            <span />
+                          </div>
+                        ),
+                      )}
+                    </div>
+                    <small>
+                      Hidden titles, text and original links stay on the server.
+                    </small>
+                  </section>
+                )}
                 {scan.results.length > 0 && !visibleResults.length && (
                   <div className="empty-state">
                     <h3>Your shortlist starts here.</h3>

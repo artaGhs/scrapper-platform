@@ -176,3 +176,7 @@ For scans with fewer than ten results, report the actual denominator. Record raw
 | Can the prototype be built in four hours? | Estimate for experienced builder with ready setup | Feasible source, bounded scope and actual build timing |
 
 Next work is source feasibility and customer validation after authorization. Implementation details are specified in [the MVP plan](mvp-plan.md); no app implementation is included in this repository.
+
+## Final implementation decision
+
+The user narrowed release to Reddit only. Existing verified [Syften buying-intent filters](https://syften.com/buying-intent-alerts) and [Redreach filtering guidance](https://help.redreach.ai/using-redreach-inbound/44NmqDS5g99v7wihXd1dLa/how-to-optimize-reddit-post-filtering-with-ai/5E1DaJeaNiJ6DMHndcfHG4) informed category/problem retrieval followed by business-context qualification, original words and manual review. Unknown competitor names are never generated. We retain the connected bounded Apify actor for this on-demand MVP. Competitor coverage claims do not prove their upstream supplier or that they use Apify. [F5Bot's API documentation](https://f5bot.com/docs-api) describes feeds/webhooks, and [Octolens Build](https://octolens.com/build) offers an embedded API path; neither was integrated or purchased. Persistent comment-aware monitoring and customer-display rights require later provider evaluation. Actual hosted useful-result evidence is in [validation](validation.md), separate from research examples.

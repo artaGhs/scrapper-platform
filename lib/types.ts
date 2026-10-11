@@ -112,7 +112,11 @@ export type PublicScan = Pick<
   | "retrieved"
   | "notice"
   | "error"
-> & { sourceRuns?: PublicSourceRun[] };
+> & {
+  sourceRuns?: PublicSourceRun[];
+  matchCount?: number;
+  lockedCount?: number;
+};
 export type PublicSourceRun = Omit<
   SourceRun,
   "runId" | "datasetId" | "actualUsd"
@@ -147,7 +151,9 @@ export function publicScan(
         queryPlans,
       }),
     ),
-    results: scan.results,
+    results: scan.results.slice(0, 3),
+    matchCount: scan.results.length,
+    lockedCount: Math.max(0, scan.results.length - 3),
     retrieved: scan.retrieved,
     notice: scan.notice,
     error: scan.error,

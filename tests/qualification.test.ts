@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { interpret, rank } from "../lib/discovery";
+import { cleanSourceText, interpret, rank } from "../lib/discovery";
 import { assessCandidates } from "../lib/model-review";
 import { advance } from "../lib/service";
 import { ScanStore } from "../lib/sqlite-store";
-import { terminalStages, type SourceItem } from "../lib/types";
+import { terminalStages, publicScan, type SourceItem } from "../lib/types";
 const description =
   "Our app estimates calories from a food photo instead of manual logging.";
 const business = interpret(description);
@@ -68,6 +68,26 @@ test("replacement requests and first-person problems have distinct evidence; com
   assert.equal(problem.need, "Problem context");
   assert.equal(
     rank([post("That calorie tracking app is expensive.")], business).length,
+    0,
+  );
+});
+test("food-photo estimation questions are problem context, not app requests", () => {
+  const item = post(
+    "Can anyone help me estimate how many calories I ate from this meal? Before and after photos included.",
+  );
+  item.title = "Calorie estimate for this meal?";
+  const result = rank([item], business)[0];
+  assert.equal(result.need, "Problem context");
+  assert.ok(result.text.includes(result.evidence));
+  assert.equal(
+    rank(
+      [
+        post(
+          "I built a calorie estimating app. Can anyone try my food photo tool?",
+        ),
+      ],
+      business,
+    ).length,
     0,
   );
 });
@@ -226,5 +246,34 @@ test("application review is persisted once, model failure is disclosed and sampl
   } finally {
     if (prior === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = prior;
+  }
+});
+
+test("RSS cleanup preserves the actual words and preview payload withholds extra real matches", () => {
+  assert.equal(
+    cleanSourceText(
+      "I can&#39;t log meals. &#32; submitted by &#32; /u/test [link] [comments]",
+    ),
+    "I can't log meals.",
+  );
+  const db = new ScanStore(":memory:");
+  try {
+    const scan = db.create("owner", randomUUID(), description, "sample", 0);
+    scan.results = Array.from({ length: 6 }, (_, i) => ({
+      ...rank([post("Looking for a calorie tracking app.")], business)[0],
+      id: `match-${i}`,
+      text: i < 3 ? "Visible words" : "Private extra result",
+    }));
+    const payload = publicScan(scan);
+    assert.equal(payload.results.length, 3);
+    assert.equal(payload.matchCount, 6);
+    assert.equal(payload.lockedCount, 3);
+    assert.ok(!JSON.stringify(payload).includes("Private extra result"));
+    assert.ok(!JSON.stringify(payload).includes("match-5"));
+    scan.results = scan.results.slice(0, 2);
+    assert.equal(publicScan(scan).lockedCount, 0);
+    assert.equal(publicScan(scan).results.length, 2);
+  } finally {
+    db.close();
   }
 });

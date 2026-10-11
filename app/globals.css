@@ -1062,3 +1062,43 @@ footer {
     margin-bottom: 10px;
   }
 }
+
+.report-preview {
+  border-top: 1px solid var(--line);
+  padding: 32px 0;
+}
+.report-preview h3 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.report-preview p {
+  color: var(--muted);
+  max-width: 65ch;
+  margin: 0 0 20px;
+}
+.report-preview small {
+  color: var(--muted);
+}
+.locked-previews {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+.locked-preview {
+  display: grid;
+  gap: 12px;
+  filter: blur(4px);
+  pointer-events: none;
+}
+.locked-preview span {
+  display: block;
+  background: var(--line);
+  height: 10px;
+  width: 70%;
+}
+.locked-preview span:first-child {
+  width: 38%;
+}
+.locked-preview span:last-child {
+  width: 55%;
+}

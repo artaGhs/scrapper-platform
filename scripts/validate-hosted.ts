@@ -53,7 +53,7 @@ async function main() {
     if (!ledger[name].scanId) {
       await page.goto(base);
       await page
-        .getByLabel("What do you offer, and who is it for?")
+        .getByLabel("Tell us what your business does")
         .fill(description);
       await page.getByLabel("Live search", { exact: true }).check();
       await page
@@ -65,7 +65,7 @@ async function main() {
           response.request().method() === "POST",
       );
       await page
-        .getByRole("button", { name: "Run search", exact: true })
+        .getByRole("button", { name: "Run research", exact: true })
         .click();
       const response = await created;
       if (response.status() !== 201)
@@ -157,12 +157,13 @@ async function main() {
       stage: scan.stage,
       retrieved: scan.retrieved,
       normalized: scan.sourceRuns?.[0]?.normalized,
-      qualified: scan.results.length,
+      qualified: stored?.results.length ?? scan.results.length,
+      visiblePreview: scan.results.length,
       modelReview: scan.modelReview,
       reservationUsd: 0.08,
       actualUsd,
       notice: scan.notice,
-      links: scan.results.map(
+      links: (stored?.results || scan.results).map(
         ({ title, url, text, evidence, need, publishedAt, reviewMethod }) => ({
           title,
           url,

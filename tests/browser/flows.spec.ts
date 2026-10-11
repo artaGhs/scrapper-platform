@@ -18,9 +18,11 @@ test("sample input → progress → results, save, feedback, persistence and sou
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await page.getByRole("button", { name: "Food photo app" }).click();
-  await expect(page.getByRole("button", { name: "Run search" })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Run research" }),
+  ).toBeEnabled();
   await capture(page, "desktop");
-  await page.getByRole("button", { name: "Run search" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
   await expect(page.getByRole("status")).toContainText(
     /Reading|Preparing|Loading|Reviewing|Checking/,
   );
@@ -73,17 +75,17 @@ test("empty fixtures and disabled live configuration remain truthful", async ({
 }) => {
   await page.goto("/");
   await page
-    .getByLabel("What do you offer, and who is it for?")
+    .getByLabel("Tell us what your business does")
     .fill(
       "We manufacture custom ceramic kitchen tiles for architects and interior designers.",
     );
-  await page.getByRole("button", { name: "Run search" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
   await expect(
     page.getByRole("heading", { name: "No strong matches this time." }),
   ).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "Start over" }).click();
   await page.getByLabel("Live search", { exact: true }).check();
-  await page.getByRole("button", { name: "Run search" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
   await expect(page.locator(".error-message[role=alert]")).toContainText(
     /budget|connected|pilot access/,
   );
@@ -96,9 +98,9 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Run search" })).toBeInViewport(
-    { ratio: 1 },
-  );
+  await expect(
+    page.getByRole("button", { name: "Run research" }),
+  ).toBeInViewport({ ratio: 1 });
   await capture(page, "mobile-start");
   await page.keyboard.press("Tab");
   await expect(
@@ -106,10 +108,10 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByLabel("What do you offer, and who is it for?"),
+    page.getByLabel("Tell us what your business does"),
   ).toBeFocused();
   await page.getByRole("button", { name: "Uptime monitor" }).click();
-  await page.getByRole("button", { name: "Run search" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
   await expect(
     page.getByRole("heading", { name: "3 examples worth a closer look." }),
   ).toBeVisible({ timeout: 15000 });
@@ -232,9 +234,9 @@ test("launch is Reddit only and preserves real provenance on partial retrieval",
   );
   await page.getByRole("button", { name: "Uptime monitor" }).click();
   await page.getByLabel("Live search", { exact: true }).check();
-  await page.getByRole("button", { name: "Run search" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
   await expect(
-    page.getByRole("heading", { name: "1 matches worth a closer look." }),
+    page.getByRole("heading", { name: "1 match worth a closer look." }),
   ).toBeVisible();
   await expect(
     page.getByRole("list", { name: "Source progress" }),
@@ -244,4 +246,55 @@ test("launch is Reddit only and preserves real provenance on partial retrieval",
   ).toHaveAttribute("href", scan.results[0].url);
   await expect(page.locator("article")).toContainText("2026");
   await expect(page.locator("article")).toContainText("Keyword rules");
+});
+
+test("additional-result preview shows only actual counts and no fabricated checkout", async ({
+  page,
+}) => {
+  const results = Array.from({ length: 3 }, (_, index) => ({
+    id: `preview-${index}`,
+    source: "reddit",
+    title: `Visible conversation ${index + 1}`,
+    text: "Looking for a calorie tracking app.",
+    url: `https://www.reddit.com/r/test/comments/abc${index}/request/`,
+    publishedAt: "2026-09-26T11:22:57.000Z",
+    community: "r/test",
+    synthetic: false,
+    reason: "A relevant category request.",
+    evidence: "Looking for",
+    need: "Solution request",
+    score: 80,
+    saved: false,
+    irrelevant: false,
+  }));
+  const scan = {
+    id: "preview-test",
+    description: "Our app estimates calories from a food photo.",
+    mode: "live",
+    sources: ["reddit"],
+    stage: "complete",
+    results,
+    matchCount: 5,
+    lockedCount: 2,
+    retrieved: 10,
+  };
+  await page.route("**/api/scans", (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(scan),
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Food photo app" }).click();
+  await page.getByLabel("Live search", { exact: true }).check();
+  await page.getByRole("button", { name: "Run research" }).click();
+  await expect(page.locator("article")).toHaveCount(3);
+  await expect(
+    page.getByRole("region", { name: "Additional results preview" }),
+  ).toContainText("5 matches found");
+  await expect(page.locator(".locked-preview")).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: /subscribe|unlock|buy/i }),
+  ).toHaveCount(0);
 });

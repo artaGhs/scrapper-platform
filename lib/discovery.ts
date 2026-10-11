@@ -237,6 +237,23 @@ export function isDiscussionRecord(
     )
   );
 }
+export function cleanSourceText(value: string): string {
+  // Remove the actor's RSS transport footer, retaining the discussion's words.
+  return value
+    .replace(
+      /(?:\s|&#32;)*submitted by(?:\s|&#32;)*\/u\/[\w-]+(?:\s|&#32;)*\[link\](?:\s|&#32;)*\[comments\]\s*$/i,
+      "",
+    )
+    .replace(/&#(\d+);/g, (entity, digits: string) => {
+      const code = Number(digits);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity;
+    })
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
 export function normalize(
   records: unknown[],
   now = Date.now(),
@@ -249,12 +266,15 @@ export function normalize(
     if (!isDiscussionRecord(record, source)) continue;
     const row = record as Record<string, unknown>;
     const url = originalUrl(row.url, source);
-    const title = typeof row.title === "string" ? row.title.slice(0, 300) : "";
+    const title =
+      typeof row.title === "string"
+        ? cleanSourceText(row.title).slice(0, 300)
+        : "";
     const text =
       typeof row.body === "string"
-        ? row.body.slice(0, 4000)
+        ? cleanSourceText(row.body).slice(0, 4000)
         : typeof row.text === "string"
-          ? row.text.slice(0, 4000)
+          ? cleanSourceText(row.text).slice(0, 4000)
           : "";
     if (!url || (!text && !title)) continue;
     const combined = `${title} ${text}`.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -303,9 +323,22 @@ export function rank(
   for (const item of items) {
     const content = `${item.title}. ${item.text}`;
     const lowered = content.toLowerCase();
-    const evidence = content
-      .split(/(?<=[.!?])\s+/)
-      .find((sentence) => request.test(sentence));
+    const photoEstimationProblem =
+      business.category === "Food & calorie tracking" &&
+      business.featureTerms.some((term) =>
+        ["photo", "picture", "camera"].includes(term),
+      ) &&
+      /\b(?:calorie(?:s)? estimate|how many (?:calories|cals)|estimate (?:how many )?calories)\b/i.test(
+        content,
+      ) &&
+      /\b(?:photo|picture|pics|meal|food|ate|eating)\b/i.test(content);
+    const evidence =
+      content
+        .split(/(?<=[.!?])\s+/)
+        .find((sentence) => request.test(sentence)) ||
+      (photoEstimationProblem
+        ? (item.title || item.text).slice(0, 700)
+        : undefined);
     if (
       !evidence ||
       /\b(?:use my|try my|i built|we launched|sponsored|affiliate link|promo code|sign up now|buy now|dm me|we just launched|just shipped|i just built|we built|our app is|check out my)\b/i.test(
@@ -380,14 +413,20 @@ export function rank(
       ...item,
       evidence: evidence.trim().slice(0, 700),
       reason: `This discussion mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
-      need: /alternative|instead of|switch from/i.test(content)
-        ? "Alternative request"
-        : /struggling with|tired of|takes too long|hard to|difficult to|trouble with|hate (?:tracking|logging)|forget to/i.test(
-              evidence,
-            ) &&
-            !/looking for|recommend|is there|what (?:app|tool)/i.test(evidence)
+      need:
+        photoEstimationProblem &&
+        !/\b(?:app|tool|software|tracker)\b/i.test(content)
           ? "Problem context"
-          : "Solution request",
+          : /alternative|instead of|switch from|moving on from/i.test(content)
+            ? "Alternative request"
+            : /struggling with|tired of|takes too long|hard to|difficult to|trouble with|hate (?:tracking|logging)|forget to/i.test(
+                  evidence,
+                ) &&
+                !/looking for|recommend|is there|what (?:app|tool)/i.test(
+                  evidence,
+                )
+              ? "Problem context"
+              : "Solution request",
       score: Math.round(
         100 * (0.4 * fit + 0.35 + 0.15 * freshness + 0.1 * specificity),
       ),
