@@ -9,6 +9,7 @@ import { publicScan } from "../lib/types";
 const url =
   "https://www.reddit.com/r/webhosting/comments/abc123/client_outage/";
 const match = {
+  authorRole: "affected_person",
   url,
   title: "A client found the outage first",
   kind: "post",
@@ -165,4 +166,23 @@ test("durable OpenAI scan consumes its allowance once and skips Gemini, Apify an
     if (previous === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = previous;
   }
+});
+
+test("explicit seller roles, market research and unsupported partial fit cannot fill the target count", () => {
+  for (const candidate of [
+    { ...match, authorRole: "researcher" },
+    { ...match, authorRole: "vendor" },
+    { ...match, title: "We built a micro SaaS that detects downtime" },
+    {
+      ...match,
+      evidence:
+        "I’m researching a problem that small business owners might have.",
+    },
+    {
+      ...match,
+      fitReason:
+        "Partial fit. This requires detecting broken checkout workflows.",
+    },
+  ])
+    assert.equal(parseDiscovery(response([candidate])).results.length, 0);
 });

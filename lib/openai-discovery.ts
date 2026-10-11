@@ -12,6 +12,7 @@ const matchSchema = z.object({
   kind: z.enum(["post", "comment"]),
   publishedAt: z.string().nullable(),
   evidence: z.string().min(10).max(1500),
+  authorRole: z.enum(["affected_person", "vendor", "researcher", "unknown"]),
   need: z.string().max(1000),
   fitReason: z.string().max(1500),
 });
@@ -95,6 +96,18 @@ export function parseDiscovery(body: Record<string, unknown>) {
   const seen = new Set<string>();
   const opportunities: Opportunity[] = [];
   for (const match of result.matches) {
+    if (match.authorRole !== "affected_person") continue;
+    // Catch explicit role/fit contradictions found during the source audit.
+    // This does not require product vocabulary or a request-shaped sentence.
+    if (
+      /^partial fit\b/i.test(match.fitReason.trim()) ||
+      (match.kind === "post" &&
+        /\b(?:we|i)\s+(?:built|launched)\s+(?:a|an|our|my)\b/i.test(
+          match.title,
+        )) ||
+      /\b(?:i['’]m|i am|we['’]re|we are) researching\b/i.test(match.evidence)
+    )
+      continue;
     const record = redditRecord(match.url);
     const source = record && sources.get(record.key);
     if (!source || source.kind !== match.kind || seen.has(source.key)) continue;
@@ -152,6 +165,7 @@ async function discoverAngle(
             "evidence",
             "need",
             "fitReason",
+            "authorRole",
           ],
           properties: {
             url: { type: "string" },
@@ -161,6 +175,10 @@ async function discoverAngle(
             evidence: { type: "string" },
             need: { type: "string" },
             fitReason: { type: "string" },
+            authorRole: {
+              type: "string",
+              enum: ["affected_person", "vendor", "researcher", "unknown"],
+            },
           },
         },
       },
