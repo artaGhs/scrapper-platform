@@ -360,12 +360,39 @@ export function rank(
     const features = business.featureTerms.filter((term) =>
       lowered.includes(term),
     );
+    const toolRequest =
+      /\b(?:recommend\w*|suggest\w*|looking for|is there|anyone (?:know|using)|need|what|which)\b[^.!?]{0,100}\b(?:apps?|tools?|trackers?|software|interface)\b/i.test(
+        content,
+      ) ||
+      /\b(?:apps?|tools?|trackers?|software)\b[^.!?]{0,100}\brecommend\w*\b/i.test(
+        content,
+      );
+    const categoryAlternative =
+      /\b(?:calorie (?:tracking|counting)|food (?:tracking|logging|journaling)|meal tracking)\b[^.!?]{0,50}\balternatives?\b/i.test(
+        content,
+      ) ||
+      /\balternatives?\b[^.!?]{0,50}\b(?:calorie (?:tracking|counting)|food (?:tracking|logging|journaling)|meal tracking)\b/i.test(
+        content,
+      );
+    const trackingProblem =
+      /\b(?:struggling|hard|difficult|trouble|hate|tired|too long|forget)\b[^.!?]{0,80}\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(
+        content,
+      ) ||
+      /\b(?:track\w*|log\w*|count\w*)\b[^.!?]{0,80}\b(?:hard|difficult|struggling|too long|tedious|exhausting)\b/i.test(
+        content,
+      );
+    const coachingRequest =
+      /\b(?:looking for|recommend\w*|need)\b[^.!?]{0,80}\b(?:nutrition coach|personal trainer|dietitian)\b/i.test(
+        content,
+      );
     const domainFit =
       business.category === "Food & calorie tracking"
         ? /\b(?:calories?|nutrition|meals?|food)\b/i.test(content) &&
-          /\b(?:app|tool|software|track(?:er|ing)?|log(?:ging)?|estimate|calculator)\b/i.test(
-            content,
-          )
+          !coachingRequest &&
+          (photoEstimationProblem ||
+            toolRequest ||
+            categoryAlternative ||
+            trackingProblem)
         : business.category === "Shopify & email marketing"
           ? /\bshopify\b/i.test(content) &&
             /\b(?:discount|codes?|email|cart)\b/i.test(content)

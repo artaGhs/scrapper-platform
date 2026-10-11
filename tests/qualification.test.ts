@@ -91,6 +91,26 @@ test("food-photo estimation questions are problem context, not app requests", ()
     0,
   );
 });
+test("general diet distress and coaching requests do not become software matches", () => {
+  for (const text of [
+    "I track calories in an app, but I need help losing weight. I feel awful in a deficit.",
+    "I'm looking for an online nutrition coach. I already use a food tracking app.",
+    "I track meals. I am tired of eggs and need dinner ideas.",
+  ]) {
+    assert.equal(rank([post(text)], business).length, 0, text);
+  }
+  assert.equal(
+    rank(
+      [
+        post(
+          "Struggling with meal tracking because logging each ingredient takes too long.",
+        ),
+      ],
+      business,
+    )[0].need,
+    "Problem context",
+  );
+});
 test("query plans pair category phrases with separate signals, preserve rationale and invent no competitor", () => {
   assert.equal(business.queryPlans!.length, 3);
   assert.ok(business.queries[0].includes('"calorie tracking"'));

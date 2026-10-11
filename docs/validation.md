@@ -67,7 +67,7 @@ The historical runs above tested the earlier pipeline. The final pipeline uses f
 
 A single optional Gemini call assesses up to five candidates using original context, exact quotation validation and accept/reject/uncertain decisions. Missing optional features are not a rejection; explicit incompatible constraints and promotions are. Sample mode makes no model calls. Failure preserves keyword matches with a disclosure. Original text/URLs/dates remain unchanged. Fit scores are not buyer probabilities. X has been removed from the public launch.
 
-33 offline tests pass, including unrelated-domain and explicit-constraint exclusions, category requests without every feature, separate problem/request labels, exact model evidence, failure fallback, once-only review persistence, ownership, idempotency, shared caps, and deferred X safeguards. Type checking, lint and production build pass. Final hosted proof and actual reported source charges are appended after verification.
+36 offline tests pass, including unrelated-domain and explicit-constraint exclusions, category requests without every feature, separate problem/request labels, exact model evidence, failure fallback, once-only review persistence, ownership, idempotency, shared caps, and deferred X safeguards. Type checking, lint and production build pass. Final hosted proof and actual reported source charges are appended after verification.
 
 ## Hosted useful-result verification, October 11, 2026
 
@@ -84,3 +84,5 @@ Gemini actually accepted two of these contexts in this hosted run; the third use
 The actor encountered repeated Reddit HTTP 429 responses, succeeded in about 131 seconds, and stopped at its explicit $0.08 cap. It returned ten records; this is bounded retrieval, not exhaustive coverage. Historical source charges plus this run total **$0.192**. Additional verification is controlled by a private ledger with at most three $0.08 reservations (**$0.24**, within the latest additional $0.25 authorization). No purchase, upgrade, new provider, automatic outreach or known-ID special case was used.
 
 The final preview returns up to three qualified results plus their actual total/hidden count. Additional titles, text, IDs and original links remain server-side. Decorative locked previews represent only actual additional matches; there is no checkout or unlock action. Pricing, subscriptions and entitlement access remain future work.
+
+The final precision pass was tested against the already-returned real dataset without another paid call. General diet distress, meal ideas and coaching requests no longer qualify as software needs; category replacement requests and direct food-photo estimation questions remain. Final offline suite: 36 passing tests.
