@@ -196,7 +196,7 @@ async function discoverAngle(
     body: JSON.stringify({
       model: "gpt-5.4-mini",
       store: false,
-      reasoning: { effort: "medium" },
+      reasoning: { effort: "low" },
       max_tool_calls: 3,
       max_output_tokens: 8000,
       tools: [
@@ -217,6 +217,7 @@ async function discoverAngle(
         currentDate: new Date().toISOString().slice(0, 10),
       }),
       text: {
+        verbosity: "low",
         format: {
           type: "json_schema",
           name: "reddit_opportunities",
@@ -226,14 +227,30 @@ async function discoverAngle(
       },
     }),
   });
-  if (!response.ok)
+  if (!response.ok) {
+    console.warn("Reddit discovery provider rejected request", { httpStatus: response.status });
     throw new AppError(
       "Reddit search is temporarily unavailable. Please try again later.",
       502,
       [400, 401, 403, 429].includes(response.status),
     );
+  }
   const body = await response.json();
-  const parsed = parseDiscovery(body);
+  let parsed: ReturnType<typeof parseDiscovery>;
+  try {
+    parsed = parseDiscovery(body);
+  } catch (error) {
+    // Log only provider metadata; never descriptions, returned text, or credentials.
+    console.warn("Reddit discovery response could not be parsed", {
+      status: ["completed", "incomplete", "failed"].includes(body.status) ? body.status : "unknown",
+      reason: ["max_output_tokens", "content_filter"].includes(body.incomplete_details?.reason)
+        ? body.incomplete_details.reason : "unknown",
+      outputTokens: Number(body.usage?.output_tokens || 0),
+      failure: error instanceof SyntaxError ? "invalid_json"
+        : error instanceof z.ZodError ? "invalid_schema" : "incomplete_response",
+    });
+    throw error;
+  }
   const usage = body.usage || {};
   const cached = Number(usage.input_tokens_details?.cached_tokens || 0);
   const searches = body.output.filter(
@@ -270,6 +287,13 @@ export async function discoverReddit(
   const successful = passes.flatMap((pass) =>
     pass.status === "fulfilled" ? [pass.value] : [],
   );
+  for (const pass of passes) {
+    if (pass.status === "rejected") console.warn("Reddit discovery pass failed", {
+      failure: pass.reason instanceof AppError ? "provider_response"
+        : pass.reason instanceof Error && ["TimeoutError", "AbortError", "TypeError", "SyntaxError", "ZodError"].includes(pass.reason.name)
+          ? pass.reason.name : "unknown",
+    });
+  }
   if (!successful.length)
     throw new AppError(
       "The search could not finish. Please try again later.",

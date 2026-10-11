@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
       );
     const billing = billingEnabled();
     const customer = billing ? await customerSession(request) : null;
-    if (billing && !customer) throw new AppError("Sign in to start your trial or use your plan.", 401);
     const owner = customer?.owner || session(request) || newSession();
     const developer = developerSession(request);
     if (input.data.mode === "sample" && !developer)
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
     if (!developer) await repository.throttle(ipHash);
     const sources = selectedSources(input.data.sources);
     const config = input.data.mode === "live" ? liveConfig(sources) : undefined;
-    const access = config && billing
+    const access = config && customer
       ? await searchAccess(owner, await repository.trial(owner))
       : undefined;
     const scan = await repository.create(

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         billingMode: process.env.MONETIZATION_MODE === "live" ? "live" : "sandbox",
         signedIn: !!customer,
         trial: trial ? { expiresAt: trial.expiresAt, used: trial.used, available: !trial.used && trial.expiresAt > Date.now() } : null,
-        freeSearchUsed: developer || billing ? false : allowance.used,
+        freeSearchUsed: developer || customer ? false : allowance.used,
         freeScanId: developer ? null : allowance.scanId,
       }),
       owner,

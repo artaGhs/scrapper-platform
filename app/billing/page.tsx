@@ -76,9 +76,9 @@ export default function BillingPage() {
         </section>
       )}
       {ready && !signedIn && (
-        <Link className="light-button" href="/api/auth/login?next=/billing">
+        <a className="account-link" href="/api/auth/login?next=/billing">
           Sign in or create an account
-        </Link>
+        </a>
       )}
       {ready && signedIn && trial?.available && (
         <p>Your trial ends {new Date(trial.expiresAt).toLocaleDateString()}. <Link href="/">Start your free search</Link></p>

@@ -31,6 +31,8 @@ data/raw/
 *.sqlite-wal
 test-results/
 playwright-report/
+.playwright-cli/
+output/playwright/
 .vercel
 
 # Private beta registry credentials, skill links and telemetry

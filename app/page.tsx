@@ -647,21 +647,29 @@ export default function Home() {
             <nav className="site-nav" aria-label="Page">
               <a href="#how">How it works</a>
               <a href="#results-info">What you get</a>
-              {(developer || billingEnabled) && <Link href="/billing">Plans and billing</Link>}
-              {billingEnabled && !signedIn && <Link href="/api/auth/login?next=/">Start free trial</Link>}
             </nav>
           )}
-          {developer && (
-            <button
-              type="button"
-              className="light-button"
-              onClick={() =>
-                focusComposer(mode === "sample" ? "live" : "sample")
-              }
-              disabled={busy}
-            >
-              {mode === "sample" ? "Use live search" : "Try a sample"}
-            </button>
+          {(developer || billingEnabled) && (
+            <nav className="account-nav" aria-label="Account">
+              <Link href="/billing">Plans and billing</Link>
+              {billingEnabled && !signedIn && (
+                <a className="account-link" href="/api/auth/login?next=/">
+                  Sign in / Sign up
+                </a>
+              )}
+              {developer && (
+                <button
+                  type="button"
+                  className="light-button"
+                  onClick={() =>
+                    focusComposer(mode === "sample" ? "live" : "sample")
+                  }
+                  disabled={busy}
+                >
+                  {mode === "sample" ? "Use live search" : "Try a sample"}
+                </button>
+              )}
+            </nav>
           )}
         </header>
 
@@ -774,12 +782,19 @@ export default function Home() {
               ? "Fictional examples. No live search or original post links."
               : developer
                 ? "Developer mode: repeated runs enabled. Each job remains cost-capped."
-                : freeSearchUsed
-                  ? freeScanId
-                    ? "Your free search has been used. Results are available in this browser for 24 hours after your search."
-                    : "Your free search has been used. Its results are no longer available in this browser."
-                  : "One free Reddit search. Up to three useful results."}
+                : billingEnabled && signedIn
+                  ? "Research uses your available trial or plan allowance."
+                  : freeSearchUsed
+                    ? freeScanId
+                      ? "Your free search has been used. Results are available in this browser for 24 hours after your search."
+                      : "Your free search has been used. Its results are no longer available in this browser."
+                    : "One free Reddit search. Up to three useful results."}
           </p>
+          {billingEnabled && !signedIn && !developer && freeSearchUsed && (
+            <a className="account-link" href="/api/auth/login?next=/">
+              Sign in or create an account <Arrow />
+            </a>
+          )}
           {developer && (
             <button
               type="button"
@@ -846,6 +861,11 @@ export default function Home() {
         {error && (
           <div className="error-message" role="alert">
             <p>{error}</p>
+            {billingEnabled && !signedIn && !developer && (
+              <a className="account-link" href="/api/auth/login?next=/">
+                Sign in or create an account <Arrow />
+              </a>
+            )}
             {pollPaused && (
               <button
                 onClick={() => {

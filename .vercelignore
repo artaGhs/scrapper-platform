@@ -10,6 +10,8 @@ node_modules/
 .agents/
 test-results/
 playwright-report/
+.playwright-cli/
+output/playwright/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
