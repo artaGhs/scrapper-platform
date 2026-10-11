@@ -143,12 +143,55 @@ function Result({
   index,
   onFeedback,
   pending = false,
+  scanId,
+  onReply,
 }: {
   item: Opportunity;
   index: number;
   onFeedback?: (item: Opportunity, action: "save" | "irrelevant") => void;
   pending?: boolean;
+  scanId: string;
+  onReply: (reply: string) => void;
 }) {
+  const [drafting, setDrafting] = useState(false);
+  const [replyError, setReplyError] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
+  const draftLock = useRef(false);
+  const replyField = useRef<HTMLTextAreaElement>(null);
+  async function suggest() {
+    if (draftLock.current) return;
+    draftLock.current = true;
+    setDrafting(true);
+    setReplyError("");
+    try {
+      const { reply } = await request<{ reply: string }>(
+        `/api/scans/${encodeURIComponent(scanId)}/reply`,
+        { method: "POST", body: JSON.stringify({ resultId: item.id }) },
+      );
+      onReply(reply);
+    } catch (issue) {
+      setReplyError(
+        issue instanceof Error
+          ? issue.message
+          : "A reply could not be drafted. Please try again.",
+      );
+    } finally {
+      setDrafting(false);
+      draftLock.current = false;
+    }
+  }
+  async function copyReply() {
+    try {
+      await navigator.clipboard.writeText(item.suggestedReply!);
+      setCopyStatus("Copied");
+    } catch {
+      replyField.current?.focus();
+      replyField.current?.select();
+      setCopyStatus(
+        "Copy unavailable. The reply is selected; copy it manually.",
+      );
+    }
+  }
   const source = sourceNames[item.source || "reddit"];
   const publicationDate = item.synthetic ? null : when(item.publishedAt);
   return (
@@ -177,6 +220,62 @@ function Result({
         <span className="fit-label">{item.need}</span>
         <p>{item.reason}</p>
       </div>
+      {(item.source || "reddit") === "reddit" && (
+        <div className="reply-draft" aria-busy={drafting}>
+          <div className="reply-heading">
+            <span className="fit-label">Suggested reply</span>
+            {item.suggestedReply ? (
+              <button
+                type="button"
+                className="reply-button"
+                onClick={copyReply}
+              >
+                {copyStatus === "Copied" ? "Copied" : "Copy reply"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="reply-button"
+                disabled={drafting}
+                onClick={suggest}
+              >
+                {drafting
+                  ? "Drafting…"
+                  : replyError
+                    ? "Try again"
+                    : "Draft reply"}
+              </button>
+            )}
+          </div>
+          {item.suggestedReply && (
+            <textarea
+              ref={replyField}
+              aria-label="Suggested reply"
+              value={item.suggestedReply}
+              readOnly
+              rows={5}
+            />
+          )}
+          <p className="reply-note">
+            Review and copy when ready. Nothing is posted to Reddit.
+          </p>
+          {drafting && (
+            <p role="status" className="reply-note">
+              Writing a reply for this conversation…
+            </p>
+          )}
+          {replyError && (
+            <p className="error-message" role="alert">
+              {replyError}
+            </p>
+          )}
+          {copyStatus && (
+            <p className="reply-note" role="status">
+              {copyStatus}
+            </p>
+          )}
+        </div>
+      )}
       <div className="result-actions">
         {item.url ? (
           <a
@@ -247,7 +346,20 @@ export default function Home() {
   const busy = starting || (!!scan && !terminalStages.includes(scan.stage));
 
   const remember = useCallback((next: PublicScan) => {
-    setScan(next);
+    setScan((current) => {
+      if (current?.id !== next.id) return next;
+      // A feedback response may have been read before an in-flight draft saved.
+      return {
+        ...next,
+        results: next.results.map((item) => ({
+          ...item,
+          suggestedReply:
+            item.suggestedReply ||
+            current.results.find((result) => result.id === item.id)
+              ?.suggestedReply,
+        })),
+      };
+    });
     if (next.free && !next.developer) {
       setFreeSearchUsed(!!next.freeSearchUsed);
       setFreeScanId(next.id);
@@ -980,11 +1092,26 @@ export default function Home() {
                 <div className="results">
                   {visibleResults.map((item, index) => (
                     <Result
-                      key={item.id}
+                      key={`${scan.id}:${item.id}`}
                       item={item}
                       index={index}
                       onFeedback={feedback}
                       pending={pendingFeedback}
+                      scanId={scan.id}
+                      onReply={(reply) =>
+                        setScan((current) =>
+                          current?.id === scan.id
+                            ? {
+                                ...current,
+                                results: current.results.map((result) =>
+                                  result.id === item.id
+                                    ? { ...result, suggestedReply: reply }
+                                    : result,
+                                ),
+                              }
+                            : current,
+                        )
+                      }
                     />
                   ))}
                 </div>

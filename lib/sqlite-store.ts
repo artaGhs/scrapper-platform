@@ -328,6 +328,28 @@ export class ScanStore {
         scan.owner,
       );
   }
+  saveReply(
+    id: string,
+    owner: string,
+    resultId: string,
+    reply: string,
+  ): string {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const scan = this.get(id, owner);
+      if (!scan) throw new AppError("Search not found or expired.", 404);
+      const item = scan.results.find((result) => result.id === resultId);
+      if (!item) throw new AppError("Result not found.", 404);
+      item.suggestedReply ||= reply;
+      // Read current state inside the transaction so feedback is preserved.
+      this.save(scan, false);
+      this.db.exec("COMMIT");
+      return item.suggestedReply;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
   feedback(
     id: string,
     owner: string,

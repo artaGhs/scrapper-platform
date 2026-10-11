@@ -67,6 +67,7 @@ export interface SourceItem {
   synthetic: boolean;
 }
 export interface Opportunity extends SourceItem {
+  suggestedReply?: string;
   reason: string;
   evidence: string;
   need: "Solution request" | "Alternative request" | "Problem context";
