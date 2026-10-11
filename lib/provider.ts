@@ -59,9 +59,9 @@ export class ApifyProvider {
     if (!response.ok) {
       const reason =
         response.status === 401 || response.status === 403
-          ? "Check the source credential and access permissions."
+          ? "Reddit search is temporarily unavailable. Please try again later."
           : response.status === 402
-            ? "The provider account has no usable balance. Sample examples are still available."
+            ? "Reddit search is temporarily unavailable. Please try again later."
             : response.status === 429
               ? "The provider is rate-limiting requests. Try again later."
               : "The provider could not complete this request. Try again later.";
@@ -137,7 +137,7 @@ export class RedditProvider extends ApifyProvider {
           includeMediaLinks: false,
           navigationTimeout: 20,
           scrollTimeout: 10,
-          searchComments: false,
+          searchComments: true,
           searchCommunities: false,
           searchUsers: false,
           skipComments: true,
@@ -147,8 +147,8 @@ export class RedditProvider extends ApifyProvider {
           includeNSFW: false,
           maxItems: limit,
           maxPostCount: Math.ceil(limit / Math.max(1, business.queries.length)),
-          maxComments: 0,
-          sort: "new",
+          maxComments: 2,
+          sort: "relevance",
           time: "year",
         }),
       }),

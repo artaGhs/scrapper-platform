@@ -3,6 +3,7 @@ export const sourceNames: Record<Source, string> = { reddit: "Reddit", x: "X" };
 export type SourceStatus =
   "queued" | "searching" | "complete" | "partial" | "failed";
 export interface SourceRun {
+  searchKinds?: ("post" | "comment")[];
   source: Source;
   status: SourceStatus;
   runId?: string;
@@ -39,6 +40,7 @@ export const terminalStages: Stage[] = [
   "failed",
 ];
 export interface Business {
+  searchScope?: "reddit-wide";
   category: string;
   summary: string;
   terms: string[];
@@ -54,6 +56,7 @@ export interface Business {
   }[];
 }
 export interface SourceItem {
+  kind?: "post" | "comment";
   source?: Source;
   id: string;
   title: string;
@@ -148,6 +151,7 @@ export function publicScan(
     sourceRuns: (scan.sourceRuns || []).map(
       ({
         source,
+        searchKinds,
         status,
         retrieved,
         normalized,
@@ -156,6 +160,7 @@ export function publicScan(
         queryPlans,
       }) => ({
         source,
+        searchKinds,
         status,
         retrieved,
         normalized,

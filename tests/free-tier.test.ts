@@ -205,6 +205,16 @@ test("free production adapter uses ten candidates and one source job", async () 
       assert.match(path, /maxTotalChargeUsd=0.12/);
       const input = JSON.parse(init!.body as string);
       assert.equal(input.maxItems, 10);
+      assert.equal(input.searchPosts, true);
+      assert.equal(input.searchComments, true);
+      assert.equal(input.skipComments, true);
+      assert.equal(input.maxComments, 2);
+      assert.equal(input.sort, "relevance");
+      assert.equal(input.searches.length, 3);
+      assert.ok(
+        input.searches.some((query: string) => !query.includes("subreddit:")),
+      );
+      assert.equal(input.searchCommunityName, undefined);
       return Response.json({
         data: { id: "run", defaultDatasetId: "data", status: "RUNNING" },
       });
@@ -290,7 +300,7 @@ test("a full ten-post free batch stopped by the cost ceiling is complete; shorte
       assert.equal(scan.results.length, 0);
       assert.equal(db.allowance("owner").used, true);
       assert.equal(scan.reservedUsd, 0.08);
-      if (expected === "empty") assert.match(scan.notice!, /ten-post batch/);
+      if (expected === "empty") assert.match(scan.notice!, /ten-record batch/);
     } finally {
       db.close();
     }

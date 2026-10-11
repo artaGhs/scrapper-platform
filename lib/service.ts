@@ -171,6 +171,9 @@ export async function advance(
             }
           }
           for (const run of scan.sourceRuns) {
+            if (run.source === "reddit")
+              run.searchKinds =
+                scan.mode === "live" ? ["post", "comment"] : ["post"];
             run.queryPlans =
               run.source === "reddit" ? scan.business.queryPlans : undefined;
             run.queries =
@@ -223,6 +226,7 @@ export async function advance(
           if (scan.mode === "sample") {
             scan.items = sampleItems(scan.sources);
             for (const run of scan.sourceRuns) {
+              if (run.source === "reddit") run.searchKinds = ["post"];
               run.status = "complete";
               run.retrieved = scan.items.filter(
                 (item) => item.source === run.source,
@@ -269,7 +273,7 @@ export async function advance(
                     502,
                   );
                 scan.items = [...(scan.items || []), ...items];
-                // A free run that delivered its whole ten-post batch and then
+                // A free run that delivered its whole ten-record batch and then
                 // hit the explicit cost ceiling fulfilled bounded retrieval.
                 // Timeouts, unexpected aborts and shorter batches stay partial.
                 const completedFreeBatch =
@@ -285,7 +289,7 @@ export async function advance(
                     : "partial";
                 if (completedFreeBatch)
                   scan.notice =
-                    "This free search reviewed its ten-post batch. It is a small sample, not an exhaustive Reddit search.";
+                    "This free search reviewed its ten-record batch. It is a small sample, not an exhaustive Reddit search.";
                 if (run.status === "partial")
                   run.error =
                     "The job stopped early. Only the records actually returned were reviewed.";
@@ -333,7 +337,7 @@ export async function advance(
             } catch {
               scan.notice = [
                 scan.notice,
-                "The model could not review these requests. Keyword checks were retained.",
+                "The additional relevance review was unavailable. These results were checked against your search terms.",
               ]
                 .filter(Boolean)
                 .join(" ");

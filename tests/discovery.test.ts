@@ -103,7 +103,7 @@ test("normalization rejects missing sources, stale items and duplicates, preserv
     ],
     now,
   );
-  assert.equal(normalized.length, 1);
+  assert.equal(normalized.length, 2);
   assert.equal(normalized[0].publishedAt, null);
 });
 

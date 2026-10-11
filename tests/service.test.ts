@@ -209,7 +209,7 @@ test("adapter sends bounded documented inputs and withholds credentials from use
   assert.ok(!requests[0].url.includes("test-token"));
   const input = JSON.parse(requests[0].init?.body as string);
   assert.equal(input.maxItems, 50);
-  assert.equal(input.searchComments, false);
+  assert.equal(input.searchComments, true);
   assert.equal(input.skipCommunity, true);
   assert.equal(input.ignoreStartUrls, true);
   assert.equal(input.includeMediaLinks, false);

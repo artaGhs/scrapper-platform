@@ -54,7 +54,7 @@ export async function assessCandidates(
                   category: business.category,
                   posts: reviewed.map((item) => ({
                     id: item.id,
-                    text: `${item.title}\n${item.text}`.slice(0, 1200),
+                    text: `${item.title}\n${item.text}`.slice(0, 2600),
                   })),
                 }),
               },
@@ -116,7 +116,7 @@ export async function assessCandidates(
   const decisions = new Map(parsed.assessments.map((item) => [item.id, item]));
   for (const item of reviewed) {
     const decision = decisions.get(item.id);
-    const supplied = `${item.title}\n${item.text}`.slice(0, 1200);
+    const supplied = `${item.title}\n${item.text}`.slice(0, 2600);
     if (
       !decision ||
       !decision.evidence.trim() ||

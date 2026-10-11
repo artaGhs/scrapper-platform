@@ -44,7 +44,7 @@ const categories = [
   },
 ];
 const stop = new Set(
-  "this that with from your have when where which there their about people business offers offer product users want need helps help using make without every into simple reduce service we our the and for app tool software".split(
+  "this that with from your have when where which there their about people business offers offer product users want need helps help using make without every into simple reduce service we our the and for app tool software sends send provides provide enables enable lets let allows allow platform teams team quickly small automatically".split(
     " ",
   ),
 );
@@ -81,68 +81,113 @@ export function interpret(description: string): Business {
         : category?.name === "Website uptime monitoring"
           ? "uptime monitor"
           : terms.slice(0, 3).join(" ");
-  // Retrieve category and problem language; qualify requests and first-person problems afterwards.
-  const queryPlans: NonNullable<Business["queryPlans"]> =
-    category?.name === "Food & calorie tracking"
-      ? [
-          {
-            phrase: '("calorie tracking" OR "calorie counting") AND app',
-            signal: "recommendation",
-            rationale:
-              "Calorie-app discussions, without requiring a particular request phrase.",
-          },
-          {
-            phrase: featureTerms.some((term) =>
-              ["photo", "picture", "camera"].includes(term),
-            )
-              ? "(food OR meal) AND (photo OR picture) AND (logging OR tracking OR calories)"
-              : '"food logging" AND app',
-            signal: "recommendation",
-            rationale:
-              "Food-photo logging context using capabilities stated in the description.",
-          },
-          {
-            phrase:
-              '(calorie OR calories OR food OR meals) AND (tracking OR logging OR counting) AND (hard OR difficult OR struggling OR tedious OR "how do" OR "how can")',
-            signal: "problem",
-            rationale:
-              "Informal tracking questions and friction; no app request or buying language is required.",
-          },
-        ]
-      : [
-          {
-            phrase: `"${phrase}"`,
-            signal: "recommendation",
-            rationale:
-              "A focused product category; context is checked after retrieval.",
-          },
-          {
-            phrase: `"${phrase}" AND alternative`,
-            signal: "alternative",
-            rationale: "Replacement language without inventing a competitor.",
-          },
-          {
-            phrase: `"${phrase}" AND (problem OR recommend OR struggling)`,
-            signal: "problem",
-            rationale: "Category-specific problems or recommendations.",
-          },
-        ];
+  // Broad searches always run alongside a preferred-community query, in one
+  // bounded job. Global queries come first so a narrow community cannot be
+  // the only source of candidates. Requests are qualified after retrieval.
   const communities =
     category?.name === "Food & calorie tracking"
       ? ["caloriecount", "loseit"]
       : category?.name === "Shopify & email marketing"
         ? ["shopify"]
         : category?.name === "Website uptime monitoring"
-          ? ["selfhosted"]
+          ? ["selfhosted", "webdev", "sysadmin"]
           : [];
-  const scope = communities.length
-    ? ` AND (${communities.map((name) => `subreddit:${name}`).join(" OR ")})`
-    : "";
-  for (const plan of queryPlans) {
-    plan.phrase += scope;
-    if (communities.length)
-      plan.rationale += ` Scoped to ${communities.map((name) => `r/${name}`).join(" and ")}.`;
-  }
+  const preferred = communities.map((name) => `subreddit:${name}`).join(" OR ");
+  const queryPlans: NonNullable<Business["queryPlans"]> =
+    category?.name === "Website uptime monitoring"
+      ? [
+          {
+            phrase:
+              "(website OR site) AND (down OR offline OR outage OR unavailable) AND (alert OR notification OR monitor OR notice OR notified OR customers OR missed)",
+            signal: "problem",
+            rationale:
+              "Across Reddit: missed outages and website-down notification problems, without requiring the phrase uptime monitor.",
+          },
+          {
+            phrase: "uptime AND (monitor OR monitoring OR alerts)",
+            signal: "recommendation",
+            rationale:
+              "Across Reddit: category keywords and variants; actual needs are checked in the returned context.",
+          },
+          {
+            phrase: `(uptime OR downtime OR "website down") AND (${preferred})`,
+            signal: "problem",
+            rationale:
+              "An additional focused search in preferred communities; it does not restrict the broader searches.",
+          },
+        ]
+      : category?.name === "Food & calorie tracking"
+        ? [
+            {
+              phrase:
+                '(calorie OR calories OR food OR meals) AND (tracking OR logging OR counting) AND (hard OR difficult OR struggling OR tedious OR "how do" OR "how can")',
+              signal: "problem",
+              rationale:
+                "Across Reddit: ordinary tracking questions and friction without requiring app or buying language.",
+            },
+            {
+              phrase: featureTerms.some((term) =>
+                ["photo", "picture", "camera"].includes(term),
+              )
+                ? "(food OR meal) AND (photo OR picture) AND (logging OR tracking OR calories)"
+                : "(food OR meal) AND (logging OR tracking) AND (app OR tool)",
+              signal: "recommendation",
+              rationale:
+                "Across Reddit: stated food-logging capabilities and everyday wording.",
+            },
+            {
+              phrase: `("calorie tracking" OR "calorie counting") AND app AND (${preferred})`,
+              signal: "recommendation",
+              rationale:
+                "An additional focused calorie-app search in preferred communities.",
+            },
+          ]
+        : category?.name === "Shopify & email marketing"
+          ? [
+              {
+                phrase:
+                  '(Shopify OR ecommerce) AND (discount OR "welcome email") AND (manual OR automate OR unique OR help)',
+                signal: "problem",
+                rationale:
+                  "Across Reddit: discount and welcome-email workflow friction, beyond r/shopify.",
+              },
+              {
+                phrase:
+                  "Shopify AND (discount OR email OR cart) AND (app OR tool OR alternative)",
+                signal: "recommendation",
+                rationale:
+                  "Across Reddit: related product categories and replacement discussions.",
+              },
+              {
+                phrase: `Shopify AND (discount OR email OR cart) AND (${preferred})`,
+                signal: "recommendation",
+                rationale:
+                  "An additional focused Shopify search in its preferred community.",
+              },
+            ]
+          : [
+              {
+                phrase:
+                  terms.length > 1
+                    ? `${terms[0]} AND (${terms.slice(1, 4).join(" OR ")})`
+                    : phrase,
+                signal: "recommendation",
+                rationale:
+                  "Across Reddit: separate business keywords rather than one exact quoted phrase.",
+              },
+              {
+                phrase: `(${terms.slice(0, 4).join(" OR ")}) AND (problem OR struggling OR tedious OR "how do" OR "how can")`,
+                signal: "problem",
+                rationale:
+                  "Across Reddit: business keywords paired with first-person friction and questions.",
+              },
+              {
+                phrase: `(${terms.slice(0, 4).join(" OR ")}) AND (recommend OR alternative OR tool OR app)`,
+                signal: "alternative",
+                rationale:
+                  "Across Reddit: product and replacement discussions; fit is checked after retrieval.",
+              },
+            ];
   return {
     category: category?.name || "Your described business",
     summary: description,
@@ -150,6 +195,7 @@ export function interpret(description: string): Business {
     featureTerms,
     categoryPhrase: phrase,
     communities,
+    searchScope: "reddit-wide",
     queries: queryPlans.map((plan) => plan.phrase),
     queryPlans,
   };
@@ -266,6 +312,11 @@ export function normalize(
     if (!isDiscussionRecord(record, source)) continue;
     const row = record as Record<string, unknown>;
     const url = originalUrl(row.url, source);
+    const kind =
+      row.dataType === "comment" ||
+      /\/comments\/[^/]+\/[^/]+\/[^/]+/.test(url || "")
+        ? "comment"
+        : "post";
     const title =
       typeof row.title === "string"
         ? cleanSourceText(row.title).slice(0, 300)
@@ -278,12 +329,18 @@ export function normalize(
           : "";
     if (!url || (!text && !title)) continue;
     const combined = `${title} ${text}`.toLowerCase().replace(/[^a-z0-9]/g, "");
-    // One entry per discussion; multiple comments in one thread cannot dominate the list.
+    // Preserve distinct comments for qualification. Ranking limits each thread
+    // to its strongest relevant post or comment afterwards.
     const thread =
       source === "x"
         ? url.match(/\/status\/(\d+)/)?.[1] || url
         : url.match(/\/comments\/([a-z0-9]+)/i)?.[1] || url;
-    if (seen.has(thread) || texts.has(combined)) continue;
+    const commentId =
+      kind === "comment"
+        ? url.match(/\/comments\/[^/]+\/[^/]+\/([^/]+)/)?.[1]
+        : null;
+    const identity = commentId ? `${thread}:comment:${commentId}` : thread;
+    if (seen.has(identity) || texts.has(combined)) continue;
     const publishedAt = publication(row.createdAt ?? row.created_utc);
     if (
       publishedAt &&
@@ -292,13 +349,14 @@ export function normalize(
     )
       continue;
     if (text === "[deleted]" || text === "[removed]") continue;
-    seen.add(thread);
+    seen.add(identity);
     texts.add(combined);
     output.push({
       source,
-      id: `${source}:${thread}`,
+      kind: source === "reddit" ? kind : undefined,
+      id: `${source}:${identity}`,
       url,
-      title,
+      title: kind === "comment" ? "" : title,
       text,
       community:
         typeof row.communityName === "string"
@@ -343,12 +401,31 @@ export function rank(
       /\bhow (?:do|can|should) (?:i|you(?: guys)?|we|people)\b[^.!?]{0,100}\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(
         content,
       );
+    const websiteOutage =
+      /\b(?:websites?|sites?|storefront|web (?:app|service))\b/i.test(
+        content,
+      ) &&
+      /\b(?:down|offline|outages?|unavailable|unreachable|downtime)\b/i.test(
+        content,
+      );
+    const uptimeProblem =
+      business.category === "Website uptime monitoring" &&
+      websiteOutage &&
+      ((/\b(?:my|our|we|i)\b/i.test(content) &&
+        /\b(?:notic\w*|notif\w*|alerts?|monitor\w*|customers?|miss\w*|again|find out|only found|didn['’]t know)\b/i.test(
+          content,
+        )) ||
+        request.test(content));
     const evidence =
       content
         .split(/(?<=[.!?])\s+/)
         .find(
           (sentence) =>
             request.test(sentence) ||
+            (uptimeProblem &&
+              /\b(?:down|offline|outages?|unavailable|unreachable|downtime)\b/i.test(
+                sentence,
+              )) ||
             (trackingProblem &&
               /\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(sentence) &&
               /hard|difficult|struggling|too long|tedious|exhausting/i.test(
@@ -410,7 +487,7 @@ export function rank(
           ? /\bshopify\b/i.test(content) &&
             /\b(?:discount|codes?|email|cart)\b/i.test(content)
           : business.category === "Website uptime monitoring"
-            ? /\b(?:uptime|downtime)\b/i.test(content) &&
+            ? (websiteOutage || /\b(?:uptime|downtime)\b/i.test(content)) &&
               /\b(?:websites?|sites?|monitor|alerts?|tools?|service)\b/i.test(
                 content,
               )
@@ -427,7 +504,10 @@ export function rank(
       /\b(?:not slack|no slack|teams only|email only)\b/i.test(content);
     const incompatibleWebsite =
       business.category === "Website uptime monitoring" &&
-      /\bnot (?:a )?website\b/i.test(content);
+      (/\bnot (?:a )?website\b/i.test(content) ||
+        /\b(?:don['’]t need|do not need|not (?:really )?(?:looking for|worried about|interested in))\b[^.!?]{0,60}\b(?:uptime|monitoring|monitor|alerts?)\b/i.test(
+          content,
+        ));
     if (
       !domainFit ||
       incompatiblePhoto ||
@@ -454,7 +534,10 @@ export function rank(
       evidence: evidence.trim().slice(0, 700),
       reason: `This discussion mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${/calorie/i.test(business.summary) && /estimat/i.test(business.summary) && business.featureTerms.includes("photo") ? "Your stated photo-based calorie estimation could help with food estimation or logging. " : ""}${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
       need:
-        (photoEstimationProblem || trackingProblem || trackingQuestion) &&
+        (photoEstimationProblem ||
+          trackingProblem ||
+          trackingQuestion ||
+          uptimeProblem) &&
         !toolRequest &&
         !categoryAlternative
           ? "Problem context"
@@ -476,5 +559,16 @@ export function rank(
       irrelevant: false,
     });
   }
-  return results.sort((a, b) => b.score - a.score).slice(0, 10);
+  const threads = new Set<string>();
+  return results
+    .sort((a, b) => b.score - a.score)
+    .filter((item) => {
+      const thread =
+        item.source !== "x" && item.url?.match(/\/comments\/([a-z0-9]+)/i)?.[1];
+      if (!thread) return true;
+      if (threads.has(thread)) return false;
+      threads.add(thread);
+      return true;
+    })
+    .slice(0, 10);
 }

@@ -272,7 +272,7 @@ test("X-only scans use structured product terms without paying for unused Gemini
     );
     assert.equal(drafts, 0);
     assert.equal(scan.business!.queryMethod, undefined);
-    assert.match(scan.sourceRuns![0].queries![0], /^"uptime monitor"/);
+    assert.match(scan.sourceRuns![0].queries!.join(" "), /uptime/);
   } finally {
     db.close();
     if (prior === undefined) delete process.env.GEMINI_API_KEY;

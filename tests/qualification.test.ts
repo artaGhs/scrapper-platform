@@ -126,10 +126,12 @@ test("ordinary tracking questions and informal friction qualify without app or b
 });
 test("query plans pair category phrases with separate signals, preserve rationale and invent no competitor", () => {
   assert.equal(business.queryPlans!.length, 3);
-  assert.ok(business.queries[0].includes('"calorie tracking"'));
+  assert.ok(
+    business.queries.some((query) => query.includes('"calorie tracking"')),
+  );
   assert.deepEqual(
     business.queryPlans!.map((plan) => plan.signal),
-    ["recommendation", "recommendation", "problem"],
+    ["problem", "recommendation", "recommendation"],
   );
   assert.ok(business.queryPlans!.every((plan) => plan.rationale.length > 10));
   assert.ok(!business.queries.join(" ").includes("MyFitnessPal"));
@@ -268,7 +270,7 @@ test("application review is persisted once, model failure is disclosed and sampl
               : "Keyword rules",
           );
           if (mode === "live" && fails)
-            assert.match(scan.notice!, /Keyword checks were retained/);
+            assert.match(scan.notice!, /checked against your search terms/);
           await advance(scan.id, "owner", db, provider, undefined, model);
           assert.equal(reviews, mode === "live" ? 1 : 0);
           assert.ok(!JSON.stringify(scan).includes("private model details"));
