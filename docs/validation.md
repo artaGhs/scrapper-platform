@@ -114,3 +114,11 @@ A durable `free_usage` ledger consumes one allowance per browser identity immedi
 Offline/mock checks cover one free run, retained three-result limit, ten-candidate adapter arguments, saved-result reloads, unknown-start consumption, confirmed rejection release/retry, cookie-identity limitations, client entitlement rejection, and durable PostgreSQL usage/admission. No new provider/model job was run.
 
 Final free-tier checks passed: 46 offline tests, six local browser checks, strict type checking, lint, production build, and durable Neon free-allowance/concurrency/release checks. Real source-validation charges remain $0.272; no new paid source/model experiment was performed.
+
+## Post-launch uptime run and budget headroom
+
+The user's October 11 uptime scan retrieved ten real Reddit posts and stopped at the original $0.08 cap. Recorded Apify status was ABORTED with an explicit maximum-cost message, not a source timeout. Ten normalized posts reached review; no result passed final business-fit review. The displayed generic “finished with gaps” message obscured that the entire small free batch had been reviewed. Read-only source inspection found repeated 429 retries and the explicit cost stop; no new source/model job was started.
+
+The user then authorized changing the easily reached run ceiling. It is now $0.12 per free source run, still exactly ten candidates and up to three retained matches; $1/hour and $5/rolling day remain unchanged. These permit at most eight maximum-cap reservations/hour and 41/day; actual source charges and Gemini cost are separate. A full ten-post batch stopped explicitly at the cost ceiling completes bounded retrieval; shorter batches, timeouts and unexpected aborts stay partial. Empty results now state how many posts were returned and that none passed fit checks. The affected saved scan is corrected without changing results, billing, free usage, or starting another job.
+
+Budget/status fix checks: 47 offline tests, seven local browser checks, strict type checking, lint, production build, and known-value source/browser-asset secret inspection passed. The new status cases distinguish full cost-stopped batches from shorter batches, timeouts, and unexpected aborts. No new paid validation run was performed.

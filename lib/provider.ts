@@ -12,6 +12,7 @@ type Run = {
   defaultDatasetId: string;
   status: string;
   usageTotalUsd?: number;
+  statusMessage?: string;
 };
 export function parseRun(value: unknown): Run {
   const data = (value as { data?: Partial<Run> })?.data;

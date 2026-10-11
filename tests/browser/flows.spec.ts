@@ -83,7 +83,7 @@ test("empty fixtures and public capacity errors remain truthful", async ({
     );
   await page.getByRole("button", { name: "Run research" }).click();
   await expect(
-    page.getByRole("heading", { name: "No strong matches this time." }),
+    page.getByRole("heading", { name: "No suitable matches in this search." }),
   ).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "Start over" }).click();
   await page.getByLabel("Live search", { exact: true }).check();
@@ -359,4 +359,51 @@ test("free search restores saved results without a full-report expansion", async
   await expect(
     page.getByRole("button", { name: /subscribe|unlock|buy/i }),
   ).toHaveCount(0);
+});
+
+test("empty free batch explains zero fit without a misleading retry or gap message", async ({
+  page,
+}) => {
+  const scan = {
+    id: "empty-free-batch",
+    description: "Our website uptime monitor sends Slack alerts.",
+    mode: "live",
+    free: true,
+    freeSearchUsed: true,
+    sources: ["reddit"],
+    stage: "empty",
+    sourceRuns: [
+      { source: "reddit", status: "complete", retrieved: 10, normalized: 10 },
+    ],
+    retrieved: 10,
+    results: [],
+    matchCount: 0,
+    lockedCount: 0,
+    notice:
+      "This free search reviewed its ten-post batch. It is a small sample, not an exhaustive Reddit search.",
+  };
+  await page.route("**/api/scans", (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(scan),
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Uptime monitor" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
+  await expect(
+    page.getByRole("heading", { name: "No suitable matches in this search." }),
+  ).toBeVisible();
+  await expect(page.locator(".empty-state")).toContainText(
+    "10 posts were returned; none passed the fit checks.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Free search used", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Refine the description" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Search finished with gaps.")).toHaveCount(0);
+  await expect(page.locator("article")).toHaveCount(0);
 });

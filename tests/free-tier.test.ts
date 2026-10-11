@@ -192,7 +192,7 @@ test("free production adapter uses ten candidates and one source job", async () 
   let starts = 0;
   Object.assign(process.env, {
     APIFY_TOKEN: "test-token",
-    LIVE_SCAN_BUDGET_USD: "0.08",
+    LIVE_SCAN_BUDGET_USD: "0.12",
     LIVE_HOURLY_BUDGET_USD: "1",
     LIVE_DAILY_BUDGET_USD: "5",
   });
@@ -202,7 +202,7 @@ test("free production adapter uses ten candidates and one source job", async () 
     if (path.includes("/acts/")) {
       starts++;
       assert.match(path, /maxItems=10/);
-      assert.match(path, /maxTotalChargeUsd=0.08/);
+      assert.match(path, /maxTotalChargeUsd=0.12/);
       const input = JSON.parse(init!.body as string);
       assert.equal(input.maxItems, 10);
       return Response.json({
@@ -222,7 +222,7 @@ test("free production adapter uses ten candidates and one source job", async () 
       randomUUID(),
       description,
       "live",
-      0.08,
+      0.12,
       1,
       ["reddit"],
       admission,
@@ -235,5 +235,64 @@ test("free production adapter uses ten candidates and one source job", async () 
     globalThis.fetch = oldFetch;
     process.env = prior;
     db.close();
+  }
+});
+
+test("a full ten-post free batch stopped by the cost ceiling is complete; shorter batches and timeouts remain partial", async () => {
+  for (const [count, status, message, expected] of [
+    [
+      10,
+      "ABORTED",
+      "This run was aborted because it reached its maximum cost of $0.08.",
+      "empty",
+    ],
+    [
+      5,
+      "ABORTED",
+      "This run was aborted because it reached its maximum cost of $0.08.",
+      "partial",
+    ],
+    [10, "TIMED-OUT", "Time limit reached", "partial"],
+    [10, "ABORTED", "Aborted unexpectedly", "partial"],
+  ] as const) {
+    const db = new ScanStore(":memory:");
+    const mocked = {
+      ...provider,
+      poll: async () => ({
+        id: "run",
+        defaultDatasetId: "data",
+        status,
+        statusMessage: message,
+      }),
+      items: async () =>
+        Array.from({ length: count }, (_, i) => ({
+          id: "bounded" + i,
+          title: "A pottery question " + i,
+          body: "Discussing ceramic glazes and clay texture. " + i,
+          url: `https://www.reddit.com/r/test/comments/bounded${i}/question/`,
+          createdAt: new Date().toISOString(),
+        })),
+    };
+    try {
+      let scan = db.create(
+        "owner",
+        randomUUID(),
+        description,
+        "live",
+        0.08,
+        1,
+        ["reddit"],
+        admission,
+      );
+      while (!terminalStages.includes(scan.stage))
+        scan = await advance(scan.id, "owner", db, mocked);
+      assert.equal(scan.stage, expected);
+      assert.equal(scan.results.length, 0);
+      assert.equal(db.allowance("owner").used, true);
+      assert.equal(scan.reservedUsd, 0.08);
+      if (expected === "empty") assert.match(scan.notice!, /ten-post batch/);
+    } finally {
+      db.close();
+    }
   }
 });

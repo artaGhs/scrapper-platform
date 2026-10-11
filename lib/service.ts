@@ -263,8 +263,23 @@ export async function advance(
                     502,
                   );
                 scan.items = [...(scan.items || []), ...items];
+                // A free run that delivered its whole ten-post batch and then
+                // hit the explicit cost ceiling fulfilled bounded retrieval.
+                // Timeouts, unexpected aborts and shorter batches stay partial.
+                const completedFreeBatch =
+                  scan.free &&
+                  state.status === "ABORTED" &&
+                  /reached its maximum cost|reached.*spending limit/i.test(
+                    state.statusMessage || "",
+                  ) &&
+                  usable >= MIN_PROVIDER_ITEMS;
                 run.status =
-                  state.status === "SUCCEEDED" ? "complete" : "partial";
+                  state.status === "SUCCEEDED" || completedFreeBatch
+                    ? "complete"
+                    : "partial";
+                if (completedFreeBatch)
+                  scan.notice =
+                    "This free search reviewed its ten-post batch. It is a small sample, not an exhaustive Reddit search.";
                 if (run.status === "partial")
                   run.error =
                     "The job stopped early. Only the records actually returned were reviewed.";

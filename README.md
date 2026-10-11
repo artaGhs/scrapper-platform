@@ -24,7 +24,7 @@ Open http://127.0.0.1:3000. Sample mode works without provider keys. Never overw
 
 ## Public live research
 
-Set server-only `APIFY_TOKEN`, optional `GEMINI_API_KEY`, `DATABASE_URL`, and explicit source budgets. Visitors enter only their business description; no access code, account or provider key is required. Production caps each free run at $0.08, with $1 per rolling hour and $5 per rolling 24 hours in shared source reservations (at most 12 maximum-cap reservations/hour and 62/day; model cost is separate). The local example disables live search.
+Set server-only `APIFY_TOKEN`, optional `GEMINI_API_KEY`, `DATABASE_URL`, and explicit source budgets. Visitors enter only their business description; no access code, account or provider key is required. Production caps each free run at $0.12, with $1 per rolling hour and $5 per rolling 24 hours in shared source reservations (at most eight maximum-cap reservations/hour and 41/day; model cost is separate). The local example disables live search.
 
 Reddit uses up to three category/problem searches, explicit Boolean syntax, and a small curated community set where available: calorie tracking uses r/caloriecount/r/loseit, Shopify uses r/shopify, uptime uses r/selfhosted. These community pages and Reddit's search syntax were checked; membership does not establish fit. Other categories use broader Reddit and disclose that scope. The past-year search shows actual dates and age rather than calling old posts fresh leads. No known example IDs are preloaded.
 

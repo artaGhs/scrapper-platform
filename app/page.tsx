@@ -756,7 +756,9 @@ export default function Home() {
                     <p className="section-label">
                       {scan.mode === "sample"
                         ? "An example of your results"
-                        : "Conversations to review"}
+                        : scan.results.length
+                          ? "Conversations to review"
+                          : "Search outcome"}
                     </p>
                     <h2 ref={resultsHeading} tabIndex={-1}>
                       {scan.stage === "failed"
@@ -764,8 +766,8 @@ export default function Home() {
                         : scan.results.length
                           ? `${scan.results.length} ${scan.mode === "sample" ? (scan.results.length === 1 ? "example" : "examples") : scan.results.length === 1 ? "match" : "matches"} worth a closer look.`
                           : scan.stage === "partial"
-                            ? "Search finished with gaps."
-                            : "No strong matches this time."}
+                            ? "No matches from this incomplete search."
+                            : "No suitable matches in this search."}
                     </h2>
                   </div>
                   <button className="text-button" onClick={reset}>
@@ -861,17 +863,27 @@ export default function Home() {
                 )}
                 {!scan.results.length && scan.stage !== "failed" && (
                   <div className="empty-state">
-                    <h3>A little more detail can help.</h3>
+                    <h3>
+                      {scan.free
+                        ? "Your free search has been used."
+                        : "A little more detail can help."}
+                    </h3>
                     <p>
                       {scan.mode === "sample"
                         ? "This small fixture set covers food-photo tracking, Shopify discounts, and website uptime. An unrelated business can correctly return no examples."
-                        : scan.stage === "partial"
-                          ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
-                          : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
+                        : scan.free
+                          ? scan.stage === "partial"
+                            ? "None of the returned posts passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. Full research is coming later."
+                            : `${scan.retrieved ?? 0} posts were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. Full research is coming later.`
+                          : scan.stage === "partial"
+                            ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
+                            : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
                     </p>
-                    <button onClick={reset}>
-                      Refine the description <Arrow />
-                    </button>
+                    {!scan.free && (
+                      <button onClick={reset}>
+                        Refine the description <Arrow />
+                      </button>
+                    )}
                   </div>
                 )}
                 {scan.retrieved !== undefined && (
