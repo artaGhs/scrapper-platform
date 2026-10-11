@@ -19,7 +19,7 @@ export function session(request: NextRequest): string | null {
 }
 export async function requestOwner(request: NextRequest): Promise<string | null> {
   if (!billingEnabled()) return session(request);
-  return (await customerSession(request))?.owner || null;
+  return (await customerSession(request))?.owner || session(request);
 }
 export function newSession(): string {
   return randomBytes(32).toString("hex");

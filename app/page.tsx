@@ -782,17 +782,15 @@ export default function Home() {
               ? "Fictional examples. No live search or original post links."
               : developer
                 ? "Developer mode: repeated runs enabled. Each job remains cost-capped."
-                : billingEnabled
-                  ? signedIn
-                    ? "Research uses your available trial or plan allowance."
-                    : "Sign in to start your free trial or use your plan."
+                : billingEnabled && signedIn
+                  ? "Research uses your available trial or plan allowance."
                   : freeSearchUsed
                     ? freeScanId
                       ? "Your free search has been used. Results are available in this browser for 24 hours after your search."
                       : "Your free search has been used. Its results are no longer available in this browser."
                     : "One free Reddit search. Up to three useful results."}
           </p>
-          {billingEnabled && !signedIn && !developer && (
+          {billingEnabled && !signedIn && !developer && freeSearchUsed && (
             <a className="account-link" href="/api/auth/login?next=/">
               Sign in or create an account <Arrow />
             </a>
