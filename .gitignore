@@ -1,0 +1,25 @@
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Dependencies and generated output
+node_modules/
+.next/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Local editor and operating system state
+.DS_Store
+.idea/
+.vscode/
+
+# Future provider exports and local caches are not project documentation
+data/raw/
+.cache/
