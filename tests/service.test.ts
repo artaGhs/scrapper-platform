@@ -121,7 +121,7 @@ test("global live reservation budget cannot be bypassed with a new session", () 
     db.create("first", randomUUID(), description, "live", 0.75, 1);
     assert.throws(
       () => db.create("second", randomUUID(), description, "live", 0.75, 1),
-      /hourly live-search budget/,
+      /capacity is full/,
     );
   } finally {
     db.close();

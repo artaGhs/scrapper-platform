@@ -20,3 +20,5 @@ Unresolved: authenticated provider quality and commercial permission. Sample car
 Finish review: updated authorization and live evidence in PRODUCT.md, changed the live cap to 50, gated paid access, brought actual progress into view, shortened the mobile introduction/form, and made synthetic fit explanations sample-aware. Live retrieval quality and commercial permission remain unresolved.
 
 Final Reddit-only release: preserve the desk and one description → Run action. No source selector. Show actual Reddit progress, source text and original links, honest date/age, request/problem labels, community scope, and review method. Sample scope is illustrative and never implies a live search. X/Instagram/TikTok deferred; YouTube outside scope. Future paid access must not fabricate extra results or imply checkout exists.
+
+Public release: live mode remains the default. Visitors describe the business and run research without a pilot code or provider keys. Shared daily capacity is disclosed beside Run research; server-side anonymous limits return clear retry messages.

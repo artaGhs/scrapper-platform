@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { AppError, RETENTION_MS, xMonthlyRunLimit } from "./config";
 import { terminalStages, type Mode, type Scan, type Source } from "./types";
+import type { Admission } from "./store";
 
 export class ScanStore {
   private db: DatabaseSync;
@@ -17,9 +18,31 @@ export class ScanStore {
       body TEXT NOT NULL, lease INTEGER NOT NULL DEFAULT 0, UNIQUE(owner, idem));
       CREATE INDEX IF NOT EXISTS scan_owner ON scans(owner, created);
       CREATE TABLE IF NOT EXISTS source_usage (source TEXT NOT NULL, month TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY(source, month));`);
+    const columns = this.db.prepare("PRAGMA table_info(scans)").all();
+    if (!columns.some((column) => column.name === "ip_hash"))
+      this.db.exec("ALTER TABLE scans ADD COLUMN ip_hash TEXT");
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS request_limits (ip_hash TEXT NOT NULL, minute INTEGER NOT NULL, used INTEGER NOT NULL, PRIMARY KEY(ip_hash,minute))",
+    );
   }
   close() {
     this.db.close();
+  }
+  throttle(ipHash: string, maxRequests = 30): void {
+    const minute = Math.floor(Date.now() / 60_000);
+    this.db
+      .prepare("DELETE FROM request_limits WHERE minute<?")
+      .run(minute - 2);
+    const row = this.db
+      .prepare(
+        "INSERT INTO request_limits(ip_hash,minute,used) VALUES(?,?,1) ON CONFLICT(ip_hash,minute) DO UPDATE SET used=used+1 RETURNING used",
+      )
+      .get(ipHash, minute);
+    if (Number(row?.used) > maxRequests)
+      throw new AppError(
+        "Too many research requests from this connection. Wait one minute and try again.",
+        429,
+      );
   }
   get(id: string, owner: string): Scan | null {
     const row = this.db
@@ -35,6 +58,7 @@ export class ScanStore {
     reservedUsd: number,
     hourlyBudget = 0,
     sources: Source[] = ["reddit"],
+    admission?: Admission,
   ): Scan {
     const now = Date.now();
     this.db.exec("BEGIN IMMEDIATE");
@@ -89,14 +113,45 @@ export class ScanStore {
           429,
         );
       if (mode === "live") {
+        if (
+          Number(
+            this.db
+              .prepare(
+                "SELECT COUNT(*) AS n FROM scans WHERE mode='live' AND created>? AND (owner=? OR (? IS NOT NULL AND ip_hash=?))",
+              )
+              .get(
+                now - 3600_000,
+                owner,
+                admission?.ipHash || null,
+                admission?.ipHash || null,
+              )?.n,
+          ) >= 2
+        )
+          throw new AppError(
+            "This session or connection has reached its limit of two live searches per hour. Try again in an hour.",
+            429,
+          );
         const spent = this.db
           .prepare(
             "SELECT COALESCE(SUM(reserved),0) AS total FROM scans WHERE mode='live' AND created>?",
           )
           .get(now - 3600_000);
-        if (Number(spent?.total) + reservedUsd > hourlyBudget)
+        if (Number(spent?.total) + reservedUsd > hourlyBudget + 1e-9)
           throw new AppError(
-            "The server has reached its hourly live-search budget. No provider job was started.",
+            "Research capacity is full for this hour. Try again in an hour; no source job was started.",
+            429,
+          );
+        const daily = this.db
+          .prepare(
+            "SELECT COALESCE(SUM(reserved),0) AS total FROM scans WHERE mode='live' AND created>?",
+          )
+          .get(now - RETENTION_MS);
+        if (
+          Number(daily?.total) + reservedUsd >
+          (admission?.dailyBudget ?? hourlyBudget) + 1e-9
+        )
+          throw new AppError(
+            "Today's research capacity is full. Try again tomorrow; no source job was started.",
             429,
           );
       }
@@ -148,7 +203,7 @@ export class ScanStore {
       };
       this.db
         .prepare(
-          "INSERT INTO scans(id,owner,idem,mode,description,stage,created,reserved,body) VALUES (?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO scans(id,owner,idem,mode,description,stage,created,reserved,body,ip_hash) VALUES (?,?,?,?,?,?,?,?,?,?)",
         )
         .run(
           scan.id,
@@ -160,6 +215,7 @@ export class ScanStore {
           now,
           reservedUsd,
           JSON.stringify(scan),
+          admission?.ipHash || null,
         );
       this.db.exec("COMMIT");
       return scan;

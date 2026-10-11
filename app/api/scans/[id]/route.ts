@@ -1,6 +1,13 @@
 import { NextRequest } from "next/server";
 import { AppError } from "@/lib/config";
-import { failure, json, sameOrigin, session } from "@/lib/http";
+import {
+  clientFingerprint,
+  failure,
+  json,
+  sameOrigin,
+  session,
+} from "@/lib/http";
+import { store } from "@/lib/store";
 import { advance } from "@/lib/service";
 import { publicScan } from "@/lib/types";
 export const runtime = "nodejs";
@@ -14,7 +21,11 @@ export async function POST(
     sameOrigin(request);
     const owner = session(request);
     if (!owner) throw new AppError("Search not found or expired.", 404);
-    return json(publicScan(await advance((await params).id, owner)));
+    const repository = await store();
+    await repository.throttle(`advance:${clientFingerprint(request)}`, 90);
+    return json(
+      publicScan(await advance((await params).id, owner, repository)),
+    );
   } catch (error) {
     return failure(error);
   }
@@ -26,7 +37,6 @@ export async function GET(
   try {
     const owner = session(request);
     if (!owner) throw new AppError("Search not found or expired.", 404);
-    const { store } = await import("@/lib/store");
     const scan = await (await store()).get((await params).id, owner);
     if (!scan) throw new AppError("Search not found or expired.", 404);
     return json(publicScan(scan));

@@ -2,11 +2,23 @@ import { neon } from "@neondatabase/serverless";
 import { randomUUID } from "node:crypto";
 import { AppError, RETENTION_MS, xMonthlyRunLimit } from "./config";
 import type { Mode, Scan, Source } from "./types";
-import type { ScanRepository } from "./store";
+import type { Admission, ScanRepository } from "./store";
 export class PostgresStore implements ScanRepository {
   private sql;
   constructor(url: string) {
     this.sql = neon(url);
+  }
+  async throttle(ipHash: string, maxRequests = 30) {
+    const minute = Math.floor(Date.now() / 60_000);
+    await this
+      .sql`DELETE FROM scrapper.request_limits WHERE minute<${minute - 2}`;
+    const rows = await this
+      .sql`INSERT INTO scrapper.request_limits(ip_hash,minute,used) VALUES(${ipHash},${minute},1) ON CONFLICT(ip_hash,minute) DO UPDATE SET used=scrapper.request_limits.used+1 RETURNING used`;
+    if (Number(rows[0].used) > maxRequests)
+      throw new AppError(
+        "Too many research requests from this connection. Wait one minute and try again.",
+        429,
+      );
   }
   async get(id: string, owner: string): Promise<Scan | null> {
     const rows = await this
@@ -21,6 +33,7 @@ export class PostgresStore implements ScanRepository {
     reservedUsd: number,
     hourlyBudget = 0,
     sources: Source[] = ["reddit"],
+    admission?: Admission,
   ): Promise<Scan> {
     const now = Date.now();
     const scan: Scan = {
@@ -41,7 +54,7 @@ export class PostgresStore implements ScanRepository {
           : undefined,
     };
     const rows = await this
-      .sql`SELECT scrapper.create_scan(${JSON.stringify(scan)}::jsonb, ${hourlyBudget}::numeric) AS result`;
+      .sql`SELECT scrapper.create_scan(${JSON.stringify({ ...scan, admission })}::jsonb, ${hourlyBudget}::numeric) AS result`;
     return this.result(rows[0].result);
   }
   private result(result: { error?: string; status?: number } | Scan): Scan {

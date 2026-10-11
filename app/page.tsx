@@ -204,7 +204,6 @@ function Result({
 
 export default function Home() {
   const [description, setDescription] = useState("");
-  const [accessCode, setAccessCode] = useState("");
   const progressSection = useRef<HTMLElement>(null);
   const [mode, setMode] = useState<Mode>("live");
   const [scan, setScan] = useState<PublicScan | null>(null);
@@ -321,7 +320,6 @@ export default function Home() {
     try {
       const next = await request<PublicScan>("/api/scans", {
         method: "POST",
-        headers: mode === "live" ? { "x-live-access": accessCode } : {},
         body: JSON.stringify({
           description,
           mode,
@@ -525,27 +523,11 @@ export default function Home() {
                   <span>Live search</span>
                 </label>
               </fieldset>
-              {mode === "live" && (
-                <div className="pilot-access">
-                  <label htmlFor="access-code" className="field-label">
-                    Pilot access code
-                  </label>
-                  <input
-                    id="access-code"
-                    type="password"
-                    autoComplete="off"
-                    value={accessCode}
-                    onChange={(event) => setAccessCode(event.target.value)}
-                    disabled={busy}
-                    placeholder="Provided by the operator"
-                  />
-                </div>
-              )}
               <div className="run-row">
                 <p>
                   {mode === "sample"
                     ? "Fictional examples. No live search or original post links."
-                    : "Reddit: up to 50 records. Access code required."}
+                    : "Reddit: up to 50 records. Shared daily capacity applies."}
                 </p>
                 <button
                   className="run-button"
@@ -792,7 +774,7 @@ export default function Home() {
                       {scan.lockedCount === 1 ? "match is" : "matches are"}{" "}
                       retained in this research report. Full-report access is
                       planned; payments and unlocking are not available in this
-                      pilot.
+                      release.
                     </p>
                     <div className="locked-previews" aria-hidden="true">
                       {Array.from(

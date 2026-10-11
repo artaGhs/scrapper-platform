@@ -71,7 +71,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
   expect(errors).toEqual([]);
 });
 
-test("empty fixtures and disabled live configuration remain truthful", async ({
+test("empty fixtures and public capacity errors remain truthful", async ({
   page,
 }) => {
   await page.goto("/");
@@ -87,9 +87,26 @@ test("empty fixtures and disabled live configuration remain truthful", async ({
   ).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "Start over" }).click();
   await page.getByLabel("Live search", { exact: true }).check();
+  // Simulate public capacity; never start a paid scan from the browser suite.
+  await page.route("**/api/scans", async (route) => {
+    const input = route.request().postDataJSON();
+    expect(input.mode).toBe("live");
+    expect(route.request().headers()["x-live-access"]).toBeUndefined();
+    await route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error:
+          "Today's research capacity is full. Try again tomorrow; no source job was started.",
+      }),
+    });
+  });
+  await expect(
+    page.getByLabel("Pilot access code", { exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Run research" }).click();
   await expect(page.locator(".error-message[role=alert]")).toContainText(
-    /budget|connected|pilot access/,
+    "Try again tomorrow",
   );
   await expect(page.locator("article")).toHaveCount(0);
 });

@@ -928,16 +928,7 @@ footer {
 .scan-section {
   scroll-margin-top: 24px;
 }
-.pilot-access {
-  margin-bottom: 16px;
-}
-.pilot-access input {
-  width: 100%;
-  padding: 10px 12px;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--control-radius);
-}
+
 @media (max-width: 800px) {
   .site-header {
     height: 70px;

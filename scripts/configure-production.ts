@@ -1,36 +1,41 @@
-// One-time deployment preparation. Loads private values directly into CLI stdin, never logs them.
+// Explicit setup only: existing production credentials and budgets are preserved.
 import { loadEnvConfig } from "@next/env";
-import { randomBytes } from "node:crypto";
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 loadEnvConfig(process.cwd());
-mkdirSync(".data", { recursive: true });
-const codePath = ".data/pilot-access-code";
-const code = existsSync(codePath)
-  ? readFileSync(codePath, "utf8").trim()
-  : randomBytes(24).toString("hex");
-writeFileSync(codePath, code + "\n", { mode: 0o600 });
+const existing = spawnSync(
+  "vercel",
+  ["env", "ls", "production", "--format=json"],
+  { encoding: "utf8" },
+);
+if (existing.status !== 0)
+  throw new Error("Could not inspect private production configuration.");
+const names = new Set(
+  (JSON.parse(existing.stdout).envs as { key: string }[]).map(
+    (item) => item.key,
+  ),
+);
 const values: Record<string, string> = {
   APIFY_TOKEN: process.env.APIFY_TOKEN || "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
-  LIVE_ACCESS_CODE: code,
-  LIVE_SCAN_BUDGET_USD: "0.08",
-  LIVE_HOURLY_BUDGET_USD: "0.08",
+  LIVE_SCAN_BUDGET_USD: process.env.LIVE_SCAN_BUDGET_USD || "0",
+  LIVE_HOURLY_BUDGET_USD: process.env.LIVE_HOURLY_BUDGET_USD || "0.08",
+  LIVE_DAILY_BUDGET_USD: process.env.LIVE_DAILY_BUDGET_USD || "0.08",
 };
 for (const [name, value] of Object.entries(values)) {
+  if (names.has(name)) {
+    console.log("Retained private production variable: " + name);
+    continue;
+  }
   if (!value) throw new Error("Required private configuration is missing.");
   const result = spawnSync(
     "vercel",
     ["env", "add", name, "production", "--sensitive", "--yes"],
     { input: value, encoding: "utf8" },
   );
-  if (result.status !== 0) {
-    console.error(
+  if (result.status !== 0)
+    throw new Error(
       "Private environment setup failed for " + name + "; values withheld.",
     );
-    process.exit(1);
-  }
   console.log("Configured private production variable: " + name);
 }
-console.log("Pilot access code is saved only in ignored " + codePath);

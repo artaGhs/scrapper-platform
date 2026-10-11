@@ -22,6 +22,7 @@ export function liveConfig(sources: Source[] = ["reddit"]) {
   const token = process.env.APIFY_TOKEN?.trim();
   const budget = Number(process.env.LIVE_SCAN_BUDGET_USD || 0);
   const hourlyBudget = Number(process.env.LIVE_HOURLY_BUDGET_USD || 2);
+  const dailyBudget = Number(process.env.LIVE_DAILY_BUDGET_USD || hourlyBudget);
   if (!token)
     throw new AppError(
       "Live Reddit is not connected. Ask the operator to connect the source. Sample examples remain available.",
@@ -33,14 +34,17 @@ export function liveConfig(sources: Source[] = ["reddit"]) {
     budget > 1 ||
     !Number.isFinite(hourlyBudget) ||
     hourlyBudget <= 0 ||
-    hourlyBudget > 10
+    hourlyBudget > 10 ||
+    !Number.isFinite(dailyBudget) ||
+    dailyBudget <= 0 ||
+    dailyBudget > 10
   ) {
     throw new AppError(
       `Live search needs an explicit server budget: LIVE_SCAN_BUDGET_USD must be at least ${minimum} for the selected sources and at most 1; LIVE_HOURLY_BUDGET_USD must be above 0 and at most 10. No provider job was started.`,
       503,
     );
   }
-  return { token, budget, hourlyBudget };
+  return { token, budget, hourlyBudget, dailyBudget };
 }
 
 export function xMonthlyRunLimit(): number {

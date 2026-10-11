@@ -1,4 +1,4 @@
-import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
+import { randomBytes, createHmac } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "./config";
 const cookieName = "scrapper_session";
@@ -30,7 +30,7 @@ export function json(value: unknown, status = 200) {
   });
 }
 export function failure(error: unknown) {
-  return json(
+  const response = json(
     {
       error:
         error instanceof AppError
@@ -39,6 +39,9 @@ export function failure(error: unknown) {
     },
     error instanceof AppError ? error.status : 500,
   );
+  if (error instanceof AppError && error.status === 429)
+    response.headers.set("Retry-After", "60");
+  return response;
 }
 export function sameOrigin(request: NextRequest) {
   const expectedOrigin = `${request.nextUrl.protocol}//${request.headers.get("host") || request.nextUrl.host}`;
@@ -74,22 +77,13 @@ export async function body(request: NextRequest): Promise<unknown> {
     throw new AppError("The request contains invalid JSON.");
   }
 }
-export function authorizeLive(request: NextRequest) {
-  const code = process.env.LIVE_ACCESS_CODE;
-  if (!code) {
-    if (process.env.VERCEL)
-      throw new AppError(
-        "Live search is closed until pilot access is configured.",
-        503,
-      );
-    return;
-  }
-  const provided = request.headers.get("x-live-access") || "";
-  const expectedHash = createHash("sha256").update(code).digest();
-  const providedHash = createHash("sha256").update(provided).digest();
-  if (!timingSafeEqual(expectedHash, providedHash))
-    throw new AppError(
-      "Enter the pilot access code to use live search. Sample examples remain available.",
-      403,
-    );
+export function clientFingerprint(request: NextRequest): string {
+  // Vercel overwrites this header with the connecting client IP. Locally all
+  // requests share one bucket; never accept arbitrary client identity headers.
+  const ip = process.env.VERCEL
+    ? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+    : "local";
+  return createHmac("sha256", process.env.APIFY_TOKEN || "local-only")
+    .update(ip)
+    .digest("hex");
 }

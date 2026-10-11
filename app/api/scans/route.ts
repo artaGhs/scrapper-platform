@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError, liveConfig } from "@/lib/config";
 import {
   attachSession,
-  authorizeLive,
+  clientFingerprint,
   body,
   failure,
   json,
@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
         "Describe your business in 20–1,500 characters and choose a search mode.",
       );
     const owner = session(request) || newSession();
-    if (input.data.mode === "live") authorizeLive(request);
+    const repository = await store();
+    const ipHash = clientFingerprint(request);
+    await repository.throttle(ipHash);
     const sources = selectedSources(input.data.sources);
     const config = input.data.mode === "live" ? liveConfig(sources) : undefined;
-    const scan = await (
-      await store()
-    ).create(
+    const scan = await repository.create(
       owner,
       input.data.key,
       input.data.description,
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       config?.budget || 0,
       config?.hourlyBudget,
       sources,
+      config ? { ipHash, dailyBudget: config.dailyBudget } : undefined,
     );
     return attachSession(json(publicScan(scan), 201), owner, request);
   } catch (error) {

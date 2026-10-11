@@ -13,15 +13,22 @@ CREATE INDEX IF NOT EXISTS scan_owner ON scrapper.scans(owner, created);
 -- statement
 REVOKE ALL ON scrapper.scans FROM PUBLIC;
 -- statement
+ALTER TABLE scrapper.scans ADD COLUMN IF NOT EXISTS ip_hash text;
+-- statement
+CREATE TABLE IF NOT EXISTS scrapper.request_limits (ip_hash text NOT NULL, minute bigint NOT NULL, used integer NOT NULL, PRIMARY KEY(ip_hash,minute));
+-- statement
+REVOKE ALL ON scrapper.request_limits FROM PUBLIC;
+-- statement
 CREATE TABLE IF NOT EXISTS scrapper.source_usage (source text NOT NULL, month text NOT NULL, used integer NOT NULL, PRIMARY KEY(source,month));
 -- statement
 REVOKE ALL ON scrapper.source_usage FROM PUBLIC;
 -- statement
 CREATE OR REPLACE FUNCTION scrapper.create_scan(candidate jsonb, hourly_budget numeric) RETURNS jsonb
 LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog AS $$
-DECLARE prior jsonb; stamp bigint := (candidate->>'createdAt')::bigint; own text := candidate->>'owner'; usage_month text := to_char(to_timestamp(stamp/1000.0) AT TIME ZONE 'UTC','YYYY-MM'); run_limit integer := coalesce((candidate->>'xMonthlyRunLimit')::integer,5);
+DECLARE prior jsonb; stamp bigint := (candidate->>'createdAt')::bigint; own text := candidate->>'owner'; usage_month text := to_char(to_timestamp(stamp/1000.0) AT TIME ZONE 'UTC','YYYY-MM'); run_limit integer := coalesce((candidate->>'xMonthlyRunLimit')::integer,5); fingerprint text := candidate->'admission'->>'ipHash'; daily_budget numeric := coalesce((candidate->'admission'->>'dailyBudget')::numeric,hourly_budget);
 BEGIN
  PERFORM pg_advisory_xact_lock(839122,1);
+ candidate := candidate - 'admission';
  DELETE FROM scrapper.scans WHERE created < stamp-86400000;
  SELECT body INTO prior FROM scrapper.scans WHERE owner=own AND
  (idem=candidate->>'key' OR (description=candidate->>'description' AND mode=candidate->>'mode' AND coalesce(body->'sources','["reddit"]'::jsonb)=coalesce(candidate->'sources','["reddit"]'::jsonb) AND created>stamp-120000)) ORDER BY created DESC LIMIT 1;
@@ -37,8 +44,14 @@ BEGIN
  IF (SELECT count(*) FROM scrapper.scans WHERE owner=own AND created>stamp-3600000)>=20 THEN
   RETURN jsonb_build_object('error','This session has reached its hourly search limit. Try again later.','status',429);
  END IF;
+ IF candidate->>'mode'='live' AND (SELECT count(*) FROM scrapper.scans WHERE mode='live' AND created>stamp-3600000 AND (owner=own OR (fingerprint IS NOT NULL AND ip_hash=fingerprint)))>=2 THEN
+  RETURN jsonb_build_object('error','This session or connection has reached its limit of two live searches per hour. Try again in an hour.','status',429);
+ END IF;
+ IF candidate->>'mode'='live' AND (SELECT coalesce(sum(reserved),0) FROM scrapper.scans WHERE mode='live' AND created>stamp-86400000)+(candidate->>'reservedUsd')::numeric>daily_budget THEN
+  RETURN jsonb_build_object('error','Today''s research capacity is full. Try again tomorrow; no source job was started.','status',429);
+ END IF;
  IF candidate->>'mode'='live' AND (SELECT coalesce(sum(reserved),0) FROM scrapper.scans WHERE mode='live' AND created>stamp-3600000)+(candidate->>'reservedUsd')::numeric>hourly_budget THEN
-  RETURN jsonb_build_object('error','The server has reached its hourly live-search budget. No provider job was started.','status',429);
+  RETURN jsonb_build_object('error','Research capacity is full for this hour. Try again in an hour; no source job was started.','status',429);
  END IF;
  IF candidate->>'mode'='live' AND candidate->'sources' ? 'x' AND EXISTS(SELECT 1 FROM scrapper.scans WHERE mode='live' AND stage NOT IN ('complete','empty','partial','failed') AND created>stamp-210000 AND body->'sources' ? 'x') THEN
   RETURN jsonb_build_object('error','The X source already has a job in progress. Wait for it to finish before starting another.','status',429);
@@ -50,8 +63,8 @@ BEGIN
   END IF;
   INSERT INTO scrapper.source_usage(source,month,used) VALUES('x',usage_month,1) ON CONFLICT(source,month) DO UPDATE SET used=scrapper.source_usage.used+1;
  END IF;
- INSERT INTO scrapper.scans(id,owner,idem,mode,description,stage,created,reserved,body)
- VALUES(candidate->>'id',own,candidate->>'key',candidate->>'mode',candidate->>'description',candidate->>'stage',stamp,(candidate->>'reservedUsd')::numeric,candidate);
+ INSERT INTO scrapper.scans(id,owner,idem,mode,description,stage,created,reserved,body,ip_hash)
+ VALUES(candidate->>'id',own,candidate->>'key',candidate->>'mode',candidate->>'description',candidate->>'stage',stamp,(candidate->>'reservedUsd')::numeric,candidate,fingerprint);
  RETURN candidate;
 END $$;
 -- statement

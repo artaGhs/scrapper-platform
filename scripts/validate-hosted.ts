@@ -56,9 +56,7 @@ async function main() {
         .getByLabel("Tell us what your business does")
         .fill(description);
       await page.getByLabel("Live search", { exact: true }).check();
-      await page
-        .getByLabel("Pilot access code", { exact: true })
-        .fill(readFileSync(".data/pilot-access-code", "utf8").trim());
+
       const created = page.waitForResponse(
         (response) =>
           response.url() === `${base}/api/scans` &&

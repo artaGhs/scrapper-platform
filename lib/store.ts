@@ -1,7 +1,12 @@
 import { AppError } from "./config";
 import type { Mode, Scan, Source } from "./types";
 type MaybePromise<T> = T | Promise<T>;
+export interface Admission {
+  ipHash: string;
+  dailyBudget: number;
+}
 export interface ScanRepository {
+  throttle(ipHash: string, maxRequests?: number): MaybePromise<void>;
   get(id: string, owner: string): MaybePromise<Scan | null>;
   create(
     owner: string,
@@ -11,6 +16,7 @@ export interface ScanRepository {
     reservedUsd: number,
     hourlyBudget?: number,
     sources?: Source[],
+    admission?: Admission,
   ): MaybePromise<Scan>;
   claim(id: string, owner: string): MaybePromise<boolean>;
   expiredLease(id: string, owner: string): MaybePromise<boolean>;
