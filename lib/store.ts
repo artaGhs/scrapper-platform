@@ -47,7 +47,7 @@ export function store(): Promise<ScanRepository> {
     }
     if (process.env.VERCEL)
       throw new AppError(
-        "Scan storage is not connected. Please try again after setup is complete.",
+        "Research is temporarily unavailable. Please try again later.",
         503,
       );
     const { ScanStore } = await import("./sqlite-store");

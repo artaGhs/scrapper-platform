@@ -50,7 +50,7 @@ BEGIN
   RETURN jsonb_build_object('error','This session has reached its hourly search limit. Try again later.','status',429);
  END IF;
  IF coalesce((candidate->>'free')::boolean,false) AND EXISTS(SELECT 1 FROM scrapper.free_usage WHERE owner=own AND consumed) THEN
-  RETURN jsonb_build_object('error','Your free search has already been used. Your saved results remain available for 24 hours; full research is coming later.','status',403);
+  RETURN jsonb_build_object('error','Your free search has already been used. Saved results are available for 24 hours after your search.','status',403);
  END IF;
  IF candidate->>'mode'='live' AND (SELECT count(*) FROM scrapper.scans WHERE mode='live' AND NOT coalesce((body->>'developer')::boolean,false) AND created>stamp-3600000 AND (owner=own OR (fingerprint IS NOT NULL AND ip_hash=fingerprint)))>=10 THEN
   RETURN jsonb_build_object('error','This connection has reached its limit of ten live searches per hour. Try again in an hour.','status',429);

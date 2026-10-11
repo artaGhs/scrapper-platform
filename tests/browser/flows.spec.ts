@@ -1,6 +1,26 @@
-import { test, expect, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page,
+  type APIRequestContext,
+} from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
+
+async function enableDeveloper(request: APIRequestContext) {
+  const key =
+    process.env.TEST_DEVELOPER_ACCESS_KEY ||
+    (!process.env.TEST_BASE_URL
+      ? "local-browser-test-access-" + "a".repeat(40)
+      : "");
+  if (!key)
+    throw Error(
+      "Sample browser checks on an external server require TEST_DEVELOPER_ACCESS_KEY.",
+    );
+  expect(
+    (await request.post("/api/developer", { data: { key } })).status(),
+  ).toBe(200);
+}
 
 async function capture(page: Page, name: string) {
   if (process.env.CAPTURE_SCREENSHOTS !== "1") return;
@@ -11,11 +31,160 @@ async function capture(page: Page, name: string) {
   });
 }
 
+test("public pages offer live research without developer controls or fictional results", async ({
+  page,
+  request,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Food photo app" }).click();
+  await expect(
+    page.getByRole("button", { name: "Run research" }),
+  ).toBeEnabled();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /sample|developer/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(/Fictional example|Gemini|Keyword rules|coming later/),
+  ).toHaveCount(0);
+  await expect(page.locator("article")).toHaveCount(0);
+  await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
+    "content",
+    /prototype|sample/i,
+  );
+  await page.getByRole("link", { name: "What you get" }).click();
+  await expect(page.locator("#results-info")).toBeInViewport();
+  await page.getByRole("link", { name: "Privacy & data" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Privacy & data",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Your results and feedback" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Back to research" }).click();
+  for (const width of [320, 375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  const missing = await page.goto("/page-that-does-not-exist");
+  expect(missing?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { name: "Page not found." }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Back to research" }).click();
+  await page.goto("/developer");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
+  );
+  const robots = await request.get("/robots.txt");
+  expect(await robots.text()).toContain("Disallow: /developer");
+  expect(await robots.text()).toContain("Disallow: /api/");
+  expect(errors).toEqual([]);
+});
+
+test("expired and developer-only cached results do not reappear for public visitors", async ({
+  page,
+}) => {
+  await page.route("**/api/session", (route) =>
+    route.fulfill({
+      json: {
+        ready: true,
+        developer: false,
+        freeSearchUsed: true,
+        freeScanId: "expired-result",
+      },
+    }),
+  );
+  await page.route("**/api/scans/expired-result", (route) =>
+    route.fulfill({ status: 404, json: { error: "Expired" } }),
+  );
+  await page.goto("/");
+  await expect(
+    page.getByText(
+      "Your free search has been used. Its results are no longer available in this browser.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "View your free results" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Free search used" }),
+  ).toBeDisabled();
+  await page.route("**/api/session", (route) =>
+    route.fulfill({
+      json: {
+        ready: true,
+        developer: false,
+        freeSearchUsed: false,
+        freeScanId: null,
+      },
+    }),
+  );
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "scrapper-scan",
+      JSON.stringify({ id: "private-sample" }),
+    ),
+  );
+  await page.route("**/api/scans/private-sample", (route) =>
+    route.fulfill({ status: 403, json: { error: "Private search" } }),
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "Food photo app" }).click();
+  await expect(
+    page.getByRole("button", { name: "Run research" }),
+  ).toBeEnabled();
+  await expect(page.locator("article")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => localStorage.getItem("scrapper-scan")),
+  ).toBeNull();
+});
+
+test("a non-JSON server failure shows a recoverable public error", async ({
+  page,
+}) => {
+  await page.route("**/api/scans", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "text/html",
+      body: "<h1>Unavailable</h1>",
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Food photo app" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
+  await expect(page.locator(".error-message[role=alert]")).toContainText(
+    "The server could not complete this request. Please try again.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Run research" }),
+  ).toBeEnabled();
+  await expect(
+    page.getByLabel("Tell us what your business does"),
+  ).not.toHaveValue("");
+  await page.route("**/api/scans", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "Run research" }).click();
+  await expect(page.locator(".error-message[role=alert]")).toContainText(
+    "The connection was interrupted. Please try again.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Run research" }),
+  ).toBeEnabled();
+});
+
 test("sample input → progress → results, save, feedback, persistence and source truth", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await enableDeveloper(page.request);
   await page.goto("/");
   await page.getByLabel("Sample examples", { exact: true }).check();
   await page.getByRole("button", { name: "Food photo app" }).click();
@@ -74,6 +243,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
 test("empty fixtures and public capacity errors remain truthful", async ({
   page,
 }) => {
+  await enableDeveloper(page.request);
   await page.goto("/");
   await page.getByLabel("Sample examples", { exact: true }).check();
   await page
@@ -85,7 +255,7 @@ test("empty fixtures and public capacity errors remain truthful", async ({
   await expect(
     page.getByRole("heading", { name: "No suitable matches in this search." }),
   ).toBeVisible({ timeout: 15000 });
-  await page.getByRole("button", { name: "Start over" }).click();
+  await page.getByRole("button", { name: "New search" }).click();
   await page.getByLabel("Live search", { exact: true }).check();
   // Simulate public capacity; never start a paid scan from the browser suite.
   await page.route("**/api/scans", async (route) => {
@@ -116,6 +286,7 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await enableDeveloper(page.request);
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "Run research" }),
@@ -154,6 +325,7 @@ test("HTTP ownership, idempotency, read-only GET, origin and input bounds", asyn
   playwright,
 }) => {
   await request.get("/api/session");
+  await enableDeveloper(request);
   const input = {
     description:
       "Our Shopify app sends unique discount codes in welcome emails.",
@@ -168,7 +340,9 @@ test("HTTP ownership, idempotency, read-only GET, origin and input bounds", asyn
   const snapshot = await request.get(`/api/scans/${scan.id}`);
   expect((await snapshot.json()).stage).toBe("interpreting");
   const other = await playwright.request.newContext({
-    baseURL: process.env.TEST_BASE_URL || "http://127.0.0.1:3173",
+    baseURL:
+      process.env.TEST_BASE_URL ||
+      `http://127.0.0.1:${process.env.TEST_PORT || 3173}`,
   });
   await other.get("/api/session");
   expect((await other.get(`/api/scans/${scan.id}`)).status()).toBe(404);
@@ -253,7 +427,6 @@ test("launch is Reddit only and preserves real provenance on partial retrieval",
     0,
   );
   await page.getByRole("button", { name: "Uptime monitor" }).click();
-  await page.getByLabel("Live search", { exact: true }).check();
   await page.getByRole("button", { name: "Run research" }).click();
   await expect(
     page.getByRole("heading", { name: "1 match worth a closer look." }),
@@ -265,7 +438,7 @@ test("launch is Reddit only and preserves real provenance on partial retrieval",
     page.getByRole("link", { name: "Open original" }),
   ).toHaveAttribute("href", scan.results[0].url);
   await expect(page.locator("article")).toContainText("2026");
-  await expect(page.locator("article")).toContainText("Keyword rules");
+  await expect(page.locator("article")).not.toContainText("Keyword rules");
 });
 
 test("free search restores saved results without a full-report expansion", async ({
@@ -331,7 +504,6 @@ test("free search restores saved results without a full-report expansion", async
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Food photo app" }).click();
-  await page.getByLabel("Live search", { exact: true }).check();
   await page.getByRole("button", { name: "Run research" }).click();
   await expect(page.locator("article")).toHaveCount(3);
   await expect(
@@ -341,10 +513,10 @@ test("free search restores saved results without a full-report expansion", async
   await expect(
     page.getByRole("button", { name: "Free search used", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Start over" }).click();
+  await page.getByRole("button", { name: "Back to overview" }).click();
   await expect(
     page.getByText(
-      "Your free search has been used. Full research is coming later.",
+      "Your free search has been used. Results are available in this browser for 24 hours after your search.",
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "View your free results" }).click();
@@ -465,7 +637,7 @@ test("developer login enables repeat searches and leaving restores the public al
   await page.getByRole("button", { name: "Uptime monitor" }).click();
   await page.getByRole("button", { name: "Run research", exact: true }).click();
   await expect(page.getByText("Try another developer search.")).toBeVisible();
-  await page.getByRole("button", { name: "Start over", exact: true }).click();
+  await page.getByRole("button", { name: "New search", exact: true }).click();
   await page.getByRole("button", { name: "Run research", exact: true }).click();
   await expect(page.getByText("Try another developer search.")).toBeVisible();
   expect(creations).toBe(2);

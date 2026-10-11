@@ -5,6 +5,9 @@ node_modules/
 .env
 .env.*
 .data/
+.claude/
+.codex/
+.agents/
 test-results/
 playwright-report/
 *.sqlite

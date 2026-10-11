@@ -39,25 +39,8 @@ const examples = [
     text: "Our website uptime monitor sends a Slack alert when a site goes down, so small teams notice downtime quickly.",
   },
 ];
-// Mirrors the curated community scopes in lib/discovery.ts.
+// Examples of preferred communities used alongside Reddit-wide search in lib/discovery.ts.
 const communities = ["caloriecount", "loseit", "shopify", "selfhosted"];
-const demoMatch: Opportunity = {
-  id: "demo",
-  source: "reddit",
-  title: "Is there a calorie app that works from a photo?",
-  text: "I want to keep track of my meals, but entering every ingredient takes too long. Is there an app that can estimate calories from a food photo?",
-  url: null,
-  community: null,
-  publishedAt: null,
-  synthetic: true,
-  reason:
-    "Asks for photo-based calorie logging, which matches a description of an app that estimates calories from a food photo.",
-  evidence: "Is there an app",
-  need: "Solution request",
-  score: 0,
-  saved: false,
-  irrelevant: false,
-};
 const stages = ["Understand", "Search", "Review"] as const;
 const stageIndex: Record<Stage, number> = {
   interpreting: 0,
@@ -128,18 +111,46 @@ function Mark({ size = 28 }: { size?: number }) {
     </svg>
   );
 }
+class RequestError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  const data = await response.json();
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      signal: init?.signal ?? AbortSignal.timeout(35_000),
+      headers: { "Content-Type": "application/json", ...init?.headers },
+    });
+  } catch {
+    throw new RequestError(
+      "The connection was interrupted. Please try again.",
+      0,
+    );
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new RequestError(
+      "The server could not complete this request. Please try again.",
+      response.status,
+    );
+  }
   if (!response.ok)
-    throw new Error(data.error || "The request could not finish. Try again.");
+    throw new RequestError(
+      data.error || "The request could not finish. Try again.",
+      response.status,
+    );
   return data;
 }
 function when(value: string | null) {
-  if (!value) return "Time unknown";
+  if (!value || !Number.isFinite(Date.parse(value))) return "Date unavailable";
   return (
     new Intl.DateTimeFormat(undefined, {
       month: "short",
@@ -160,11 +171,9 @@ function Result({
   onFeedback?: (item: Opportunity, action: "save" | "irrelevant") => void;
   pending?: boolean;
 }) {
-  // The landing demo renders without feedback and outside the results' article list.
-  const Tag = onFeedback ? "article" : "div";
   const source = sourceNames[item.source || "reddit"];
   return (
-    <Tag
+    <article
       className={`result ${item.synthetic ? "is-fictional" : ""} ${item.irrelevant ? "is-dismissed" : ""}`}
     >
       <span className="result-index" aria-hidden="true">
@@ -187,12 +196,7 @@ function Result({
       <h3>{item.title || item.evidence}</h3>
       <blockquote>{item.text || item.title}</blockquote>
       <div className="fit">
-        <span className="fit-label">
-          {item.need}
-          {!item.synthetic && item.reviewMethod
-            ? ` · ${item.reviewMethod}`
-            : ""}
-        </span>
+        <span className="fit-label">{item.need}</span>
         <p>{item.reason}</p>
       </div>
       <div className="result-actions">
@@ -214,7 +218,7 @@ function Result({
           <div className="feedback-actions">
             <button
               aria-pressed={item.saved}
-              aria-disabled={pending}
+              disabled={pending}
               onClick={() => onFeedback(item, "save")}
             >
               <svg
@@ -232,7 +236,7 @@ function Result({
             </button>
             <button
               aria-pressed={item.irrelevant}
-              aria-disabled={pending}
+              disabled={pending}
               onClick={() => onFeedback(item, "irrelevant")}
             >
               {item.irrelevant ? "Undo feedback" : "Not relevant"}
@@ -240,7 +244,7 @@ function Result({
           </div>
         )}
       </div>
-    </Tag>
+    </article>
   );
 }
 
@@ -286,13 +290,15 @@ export default function Home() {
           freeScanId: string | null;
         }>("/api/session");
         if (!active) return;
-        setReady(true);
         setDeveloper(!!allowance.developer);
         setFreeSearchUsed(allowance.freeSearchUsed);
         setFreeScanId(allowance.freeScanId);
         let cached: { id?: string } = {};
         try {
-          cached = JSON.parse(localStorage.getItem("scrapper-scan") || "{}");
+          const saved = JSON.parse(
+            localStorage.getItem("scrapper-scan") || "{}",
+          );
+          if (saved && typeof saved.id === "string") cached = { id: saved.id };
         } catch {
           /* Optional storage. */
         }
@@ -303,18 +309,34 @@ export default function Home() {
               `/api/scans/${encodeURIComponent(cached.id)}`,
             );
             if (active) {
-              remember(previous);
-              setDescription(previous.description);
-              setMode(previous.mode);
+              if (
+                allowance.developer ||
+                (previous.mode === "live" && !previous.developer)
+              ) {
+                remember(previous);
+                setDescription(previous.description);
+                setMode(previous.mode);
+              }
             }
-          } catch {
-            try {
-              localStorage.removeItem("scrapper-scan");
-            } catch {
-              /* Optional storage. */
+          } catch (issue) {
+            if (
+              issue instanceof RequestError &&
+              [403, 404].includes(issue.status)
+            ) {
+              setFreeScanId(null);
+              try {
+                localStorage.removeItem("scrapper-scan");
+              } catch {
+                /* Optional storage. */
+              }
+            } else if (active) {
+              setError(
+                "Your previous results could not load. Reload the page to try again.",
+              );
             }
           }
         }
+        if (active) setReady(true);
       } catch {
         if (active)
           setError(
@@ -376,7 +398,7 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({
           description,
-          mode,
+          mode: developer ? mode : "live",
           sources: ["reddit"],
           key: runKey.current,
         }),
@@ -413,10 +435,15 @@ export default function Home() {
       setMode("live");
       setDescription(previous.description);
       setError("");
-    } catch {
-      setError(
-        "Free results are retained for 24 hours and are no longer available in this browser.",
-      );
+    } catch (issue) {
+      if (issue instanceof RequestError && issue.status === 404) {
+        setFreeScanId(null);
+        setError(
+          "Your results have expired. Results are available for 24 hours after a search.",
+        );
+      } else {
+        setError("Your results could not load. Please try again.");
+      }
     }
   }
   function focusComposer(nextMode?: Mode) {
@@ -483,9 +510,9 @@ export default function Home() {
         : scan?.stage === "searching"
           ? scan.mode === "sample"
             ? "Loading fictional examples"
-            : "Waiting for source jobs"
+            : "Searching Reddit conversations"
           : scan?.stage === "reviewing"
-            ? `Reviewing ${scan.retrieved ?? 0} returned records`
+            ? `Reviewing ${scan.retrieved ?? 0} conversations`
             : scan?.stage === "ranking"
               ? "Checking requests against your description"
               : "";
@@ -511,17 +538,19 @@ export default function Home() {
           {!scan && (
             <nav className="site-nav" aria-label="Page">
               <a href="#how">How it works</a>
-              <a href="#example">Example</a>
+              <a href="#results-info">What you get</a>
             </nav>
           )}
-          <button
-            type="button"
-            className="light-button"
-            onClick={() => focusComposer("sample")}
-            disabled={busy}
-          >
-            Try a sample
-          </button>
+          {developer && (
+            <button
+              type="button"
+              className="light-button"
+              onClick={() => focusComposer("sample")}
+              disabled={busy}
+            >
+              Try a sample
+            </button>
+          )}
         </header>
 
         {scan ? (
@@ -603,35 +632,37 @@ export default function Home() {
                 <Mark size={15} />
                 Reddit
               </span>
-              <fieldset className="mode-switch" disabled={busy}>
-                <legend className="sr-only">Search mode</legend>
-                <label>
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="live"
-                    checked={mode === "live"}
-                    onChange={() => {
-                      setMode("live");
-                      runKey.current = null;
-                    }}
-                  />
-                  <span>Live search</span>
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="sample"
-                    checked={mode === "sample"}
-                    onChange={() => {
-                      setMode("sample");
-                      runKey.current = null;
-                    }}
-                  />
-                  <span>Sample examples</span>
-                </label>
-              </fieldset>
+              {developer && (
+                <fieldset className="mode-switch" disabled={busy}>
+                  <legend className="sr-only">Search mode</legend>
+                  <label>
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="live"
+                      checked={mode === "live"}
+                      onChange={() => {
+                        setMode("live");
+                        runKey.current = null;
+                      }}
+                    />
+                    <span>Live search</span>
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="sample"
+                      checked={mode === "sample"}
+                      onChange={() => {
+                        setMode("sample");
+                        runKey.current = null;
+                      }}
+                    />
+                    <span>Sample examples</span>
+                  </label>
+                </fieldset>
+              )}
               <button
                 className="run-button"
                 disabled={
@@ -663,7 +694,9 @@ export default function Home() {
               : developer
                 ? "Developer mode: repeated runs enabled. Each job remains cost-capped."
                 : freeSearchUsed
-                  ? "Your free search has been used. Full research is coming later."
+                  ? freeScanId
+                    ? "Your free search has been used. Results are available in this browser for 24 hours after your search."
+                    : "Your free search has been used. Its results are no longer available in this browser."
                   : "One free Reddit search. Up to three useful results."}
           </p>
           {developer && (
@@ -671,11 +704,12 @@ export default function Home() {
               type="button"
               className="text-button"
               onClick={async () => {
-                const response = await fetch("/api/developer", {
-                  method: "DELETE",
-                });
-                if (response.ok) window.location.reload();
-                else setError("Could not leave developer mode. Try again.");
+                try {
+                  await request("/api/developer", { method: "DELETE" });
+                  window.location.reload();
+                } catch {
+                  setError("Could not leave developer mode. Try again.");
+                }
               }}
             >
               Leave developer mode
@@ -833,8 +867,6 @@ export default function Home() {
                         " · business and problem keywords"
                       )}
                       .
-                      {scan.mode === "live" &&
-                        " Post and comment keyword searches share one bounded run."}
                     </>
                   ) : scan.business.communities?.length ? (
                     <>
@@ -862,48 +894,50 @@ export default function Home() {
                     </>
                   )}
                 </p>
-                <details className="strategy">
-                  <summary>
-                    Search phrases <span>{scan.business.category}</span>
-                  </summary>
-                  <div className="queries">
-                    {(scan.sourceRuns?.length
-                      ? scan.sourceRuns
-                      : [
-                          {
-                            source: "reddit" as const,
-                            queries: scan.business.queries,
-                          },
-                        ]
-                    )
-                      .flatMap((run) =>
-                        (run.queries || []).map(
-                          (query) => `${sourceNames[run.source]}: ${query}`,
-                        ),
+                {developer && (
+                  <details className="strategy">
+                    <summary>
+                      Search phrases <span>{scan.business.category}</span>
+                    </summary>
+                    <div className="queries">
+                      {(scan.sourceRuns?.length
+                        ? scan.sourceRuns
+                        : [
+                            {
+                              source: "reddit" as const,
+                              queries: scan.business.queries,
+                            },
+                          ]
                       )
-                      .map((query) => (
-                        <code key={query}>{query}</code>
-                      ))}
-                  </div>
-                  {scan.sourceRuns?.flatMap((run) =>
-                    (run.queryPlans || []).map((plan) => (
-                      <p key={`${run.source}:${plan.phrase}`}>
-                        <strong>{plan.phrase}</strong> — {plan.rationale}
-                      </p>
-                    )),
-                  )}
-                  <p>
-                    Reddit post searches use the past year; returned dated
-                    records older than a year are excluded. Product keywords and
-                    problem wording find candidates, then context and fit checks
-                    qualify them.
-                    {scan.modelReview === "Gemini + keyword rules"
-                      ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
-                      : " Keyword rules check the returned context."}{" "}
-                    Dates show the age of each discussion. A match does not
-                    prove purchase intent.
-                  </p>
-                </details>
+                        .flatMap((run) =>
+                          (run.queries || []).map(
+                            (query) => `${sourceNames[run.source]}: ${query}`,
+                          ),
+                        )
+                        .map((query) => (
+                          <code key={query}>{query}</code>
+                        ))}
+                    </div>
+                    {scan.sourceRuns?.flatMap((run) =>
+                      (run.queryPlans || []).map((plan) => (
+                        <p key={`${run.source}:${plan.phrase}`}>
+                          <strong>{plan.phrase}</strong> — {plan.rationale}
+                        </p>
+                      )),
+                    )}
+                    <p>
+                      Reddit post searches use the past year; returned dated
+                      records older than a year are excluded. Product keywords
+                      and problem wording find candidates, then context and fit
+                      checks qualify them.
+                      {scan.modelReview === "Gemini + keyword rules"
+                        ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
+                        : " Keyword rules check the returned context."}{" "}
+                      Dates show the age of each discussion. A match does not
+                      prove purchase intent.
+                    </p>
+                  </details>
+                )}
               </div>
             )}
             {finished && (
@@ -928,7 +962,10 @@ export default function Home() {
                     </h2>
                   </div>
                   <button className="ghost-button" onClick={reset}>
-                    Start over <Arrow />
+                    {developer || !freeSearchUsed
+                      ? "New search"
+                      : "Back to overview"}{" "}
+                    <Arrow />
                   </button>
                 </div>
                 {scan.mode === "sample" && (
@@ -978,42 +1015,6 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                {(scan.lockedCount || 0) > 0 && filter === "all" && (
-                  <section
-                    className="report-preview"
-                    aria-label="Additional results preview"
-                  >
-                    <div className="locked-previews" aria-hidden="true">
-                      {Array.from(
-                        { length: Math.min(3, scan.lockedCount || 0) },
-                        (_, index) => (
-                          <div className="locked-preview" key={index}>
-                            <span />
-                            <span />
-                            <span />
-                          </div>
-                        ),
-                      )}
-                    </div>
-                    <div className="report-copy">
-                      <h3>
-                        {scan.matchCount} matches found. Your first three are
-                        above.
-                      </h3>
-                      <p>
-                        {scan.lockedCount} additional{" "}
-                        {scan.lockedCount === 1 ? "match is" : "matches are"}{" "}
-                        retained in this research report. Full-report access is
-                        planned; payments and unlocking are not available in
-                        this release.
-                      </p>
-                      <small>
-                        Hidden titles, text and original links stay on the
-                        server.
-                      </small>
-                    </div>
-                  </section>
-                )}
                 {scan.results.length > 0 && !visibleResults.length && (
                   <div className="empty-state">
                     <h3>Your shortlist starts here.</h3>
@@ -1042,8 +1043,8 @@ export default function Home() {
                           ? `${scan.retrieved ?? 0} records were returned; none passed the fit checks. You can refine your description and run another developer search.`
                           : scan.free
                             ? scan.stage === "partial"
-                              ? "None of the returned records passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. Full research is coming later."
-                              : `${scan.retrieved ?? 0} records were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. Full research is coming later.`
+                              ? "None of the returned records passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. This search does not cover every Reddit conversation."
+                              : `${scan.retrieved ?? 0} records were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. This search does not cover every Reddit conversation.`
                             : scan.stage === "partial"
                               ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
                               : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
@@ -1095,22 +1096,33 @@ export default function Home() {
               </ol>
             </section>
             <section
-              id="example"
+              id="results-info"
               className="example"
-              aria-labelledby="example-heading"
+              aria-labelledby="results-info-heading"
             >
               <div className="example-copy">
-                <h2 id="example-heading">What a match looks like.</h2>
+                <h2 id="results-info-heading">
+                  The context to make a useful reply.
+                </h2>
                 <p>
-                  Every match shows the original words, a reason tied to your
-                  description, and a link to the thread, so you decide whether
-                  and how to reply.
-                </p>
-                <p className="example-note">
-                  This example is fictional and has no original post.
+                  Review up to three relevant conversations, with the original
+                  words, discussion dates, and an explanation of how your
+                  business fits. Open each thread to read the full context.
                 </p>
               </div>
-              <Result item={demoMatch} index={0} />
+              <div className="results-info">
+                <h3>Keep the conversations that matter.</h3>
+                <p>
+                  Save a match to your shortlist or mark it as not relevant.
+                  Your results and feedback are available in this browser for 24
+                  hours after your search.
+                </p>
+                <p>
+                  One free search per browser. A search may return fewer than
+                  three matches, including none. Matches suggest relevance; they
+                  do not establish buying intent. Replies are always up to you.
+                </p>
+              </div>
             </section>
           </>
         )}
@@ -1134,7 +1146,7 @@ export default function Home() {
             scrapper.{" "}
             <span className="footer-sub">Listen first. Be useful.</span>
           </span>
-          <span>Search beta · Human replies only</span>
+          <Link href="/privacy">Privacy &amp; data</Link>
         </div>
       </footer>
     </div>

@@ -1389,6 +1389,40 @@ h2 {
   font-weight: 400;
 }
 
+.results-info {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+}
+.results-info h3 {
+  margin-top: 0;
+}
+.results-info p {
+  color: var(--muted);
+}
+.information-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px var(--gutter) 80px;
+  overflow-wrap: anywhere;
+}
+.information-page h1 {
+  color: var(--ink);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.15;
+  margin: 56px 0 24px;
+}
+.information-page h2 {
+  margin-top: 36px;
+  font-size: 1.3rem;
+}
+.information-page .ghost-button {
+  display: inline-flex;
+  margin-top: 24px;
+  text-decoration: none;
+}
+
 /* ——— Motion ——— */
 ::view-transition-group(*) {
   animation-duration: 0.55s;

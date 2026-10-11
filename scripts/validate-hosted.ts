@@ -55,7 +55,6 @@ async function main() {
       await page
         .getByLabel("Tell us what your business does")
         .fill(description);
-      await page.getByLabel("Live search", { exact: true }).check();
 
       const created = page.waitForResponse(
         (response) =>

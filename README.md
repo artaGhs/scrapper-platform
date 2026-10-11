@@ -4,7 +4,7 @@ Describe a business, run a bounded search, and review conversations where someon
 
 **[Open the deployed MVP](https://scrapper-platform-khaki.vercel.app)**
 
-**Implemented MVP, October 11, 2026.** Reddit-only public launch: one description, a bounded live scan, original text/URLs/dates, source-supported fit, request/problem labels, and persistent Save / Not relevant feedback. Sample examples remain clearly fictional. Vercel uses free Neon Postgres; local development can use SQLite. The hosted calorie-photo example retrieved ten real posts and three manually verified relevant conversations for $0.08; coverage varies by category.
+**Implemented MVP, October 11, 2026.** Reddit-only public launch: one description, a bounded live scan, original text/URLs/dates, source-supported fit, request/problem labels, and persistent Save / Not relevant feedback. Fictional sample research is restricted to authenticated developer access. Vercel uses free Neon Postgres; local development can use SQLite. The hosted calorie-photo example retrieved ten real posts and three manually verified relevant conversations for $0.08; coverage varies by category.
 
 ## Codebase requirement
 
@@ -20,7 +20,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. Sample mode works without provider keys. Never overwrite an existing private environment file. Scans belong to an opaque HttpOnly browser session and expire from access after 24 hours; expired rows are removed when another scan starts. Losing the session cookie loses access to saved scans.
+Open http://127.0.0.1:3000. To use sample mode without provider keys, set a private `DEVELOPER_ACCESS_KEY` of at least 32 characters and authenticate at `/developer`. Public visitors see live Reddit research only. Never overwrite an existing private environment file. Scans belong to an opaque HttpOnly browser session and expire from access after 24 hours; expired rows are removed when another scan starts. Losing the session cookie loses access to saved scans.
 
 ## Public live research
 
@@ -64,7 +64,9 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Browser tests default to http://127.0.0.1:3173; use `TEST_BASE_URL` to check another running server. Set `CAPTURE_SCREENSHOTS=1` when intentionally refreshing the committed browser evidence; ordinary checks leave those files untouched. `npm run test:database` uses the configured Neon database, creates temporary validation scans, uses a simulated provider, and removes those scans. It does not make paid source calls. The `scripts/validate-*.ts` live validation scripts require explicit authorization and retain private one-run markers to prevent accidental repeated spending.
+Browser tests start the production build at http://127.0.0.1:3173 with live provider/model calls disabled and isolated SQLite storage; build first. Set `TEST_PORT` if that port is occupied, or use `TEST_BASE_URL` and a private `TEST_DEVELOPER_ACCESS_KEY` to check another running server. Set `CAPTURE_SCREENSHOTS=1` when intentionally refreshing the committed browser evidence; ordinary checks leave those files untouched. `npm run test:database` uses the configured Neon database, creates temporary validation scans, uses a simulated provider, and removes those scans. It does not make paid source calls. The `scripts/validate-*.ts` live validation scripts require explicit authorization and retain private one-run markers to prevent accidental repeated spending.
+
+[Public production-readiness review](docs/production-readiness.md) records the public cleanup, validation, and remaining launch work.
 
 ## Research and deferred work
 

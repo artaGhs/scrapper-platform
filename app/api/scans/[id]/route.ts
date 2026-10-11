@@ -25,7 +25,7 @@ export async function POST(
     const repository = await store();
     const developer = developerSession(request);
     const existing = await repository.get((await params).id, owner);
-    if (existing?.developer && !developer)
+    if ((existing?.developer || existing?.mode === "sample") && !developer)
       throw new AppError("Enable developer mode to continue this search.", 403);
     if (!developer)
       await repository.throttle(`advance:${clientFingerprint(request)}`, 90);
@@ -45,6 +45,11 @@ export async function GET(
     if (!owner) throw new AppError("Search not found or expired.", 404);
     const scan = await (await store()).get((await params).id, owner);
     if (!scan) throw new AppError("Search not found or expired.", 404);
+    if (
+      (scan.developer || scan.mode === "sample") &&
+      !developerSession(request)
+    )
+      throw new AppError("Enable developer mode to view this search.", 403);
     return json(publicScan(scan));
   } catch (error) {
     return failure(error);

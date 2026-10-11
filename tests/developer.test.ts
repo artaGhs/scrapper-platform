@@ -18,7 +18,8 @@ import { publicScan, terminalStages } from "../lib/types";
 import { store } from "../lib/store";
 import { POST as login, DELETE as logout } from "../app/api/developer/route";
 import { POST as create } from "../app/api/scans/route";
-import { POST as progress } from "../app/api/scans/[id]/route";
+import { POST as progress, GET as read } from "../app/api/scans/[id]/route";
+import { POST as feedback } from "../app/api/scans/[id]/feedback/route";
 import { GET as session } from "../app/api/session/route";
 const description =
   "Our app estimates calories from food photos instead of manual meal logging.";
@@ -225,6 +226,18 @@ test("API authenticates developer bypass server-side, ignores forged client clai
   };
   try {
     const anonymousCookie = `scrapper_session=${owner}`;
+    assert.equal(
+      (
+        await create(
+          req("/api/scans", anonymousCookie, {
+            description,
+            mode: "sample",
+            key: randomUUID(),
+          }),
+        )
+      ).status,
+      403,
+    );
     const firstResponse = await create(
       req("/api/scans", anonymousCookie, {
         description,
@@ -265,6 +278,56 @@ test("API authenticates developer bypass server-side, ignores forged client clai
     assert.equal(response.status, 200);
     const token = response.cookies.get("scrapper_developer")!.value;
     const cookie = anonymousCookie + `; scrapper_developer=${token}`;
+    const sampleResponse = await create(
+      req("/api/scans", cookie, {
+        description,
+        mode: "sample",
+        key: randomUUID(),
+      }),
+    );
+    assert.equal(sampleResponse.status, 201);
+    const sample = await sampleResponse.json();
+    assert(sample.developer);
+    const legacySample = await db.create(
+      owner,
+      randomUUID(),
+      description,
+      "sample",
+      0,
+    );
+    for (const id of [sample.id, legacySample.id]) {
+      const params = { params: Promise.resolve({ id }) };
+      assert.equal(
+        (await read(req(`/api/scans/${id}`, anonymousCookie), params)).status,
+        403,
+      );
+      assert.equal(
+        (
+          await progress(
+            req(`/api/scans/${id}`, anonymousCookie, {}, "POST"),
+            params,
+          )
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await feedback(
+            req(`/api/scans/${id}/feedback`, anonymousCookie, {
+              resultId: "sample-result",
+              action: "save",
+              value: true,
+            }),
+            params,
+          )
+        ).status,
+        403,
+      );
+      assert.equal(
+        (await read(req(`/api/scans/${id}`, cookie), params)).status,
+        200,
+      );
+    }
     const state = await (await session(req("/api/session", cookie))).json();
     assert(state.developer);
     assert.equal(state.freeSearchUsed, false);

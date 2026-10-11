@@ -37,9 +37,11 @@ export async function POST(request: NextRequest) {
         "Describe your business in 20–1,500 characters and choose a search mode.",
       );
     const owner = session(request) || newSession();
+    const developer = developerSession(request);
+    if (input.data.mode === "sample" && !developer)
+      throw new AppError("Sample research requires developer access.", 403);
     const repository = await store();
     const ipHash = clientFingerprint(request);
-    const developer = developerSession(request);
     if (!developer) await repository.throttle(ipHash);
     const sources = selectedSources(input.data.sources);
     const config = input.data.mode === "live" ? liveConfig(sources) : undefined;

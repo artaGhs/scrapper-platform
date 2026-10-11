@@ -20,7 +20,7 @@ export class PostgresStore implements ScanRepository {
     if (!rows.length) {
       scan.startAttempted = false;
       throw new AppError(
-        "Your free search has already been used. Full research is coming later.",
+        "Your free search has already been used. Results are available for 24 hours after a search.",
         403,
       );
     }

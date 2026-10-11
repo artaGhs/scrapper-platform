@@ -47,7 +47,7 @@ export class ScanStore {
         .get(scan.owner, scan.id);
       if (!row)
         throw new AppError(
-          "Your free search has already been used. Full research is coming later.",
+          "Your free search has already been used. Results are available for 24 hours after a search.",
           403,
         );
       scan.startAttempted = true;
@@ -168,7 +168,7 @@ export class ScanStore {
       if (mode === "live" && !admission?.developer) {
         if (admission?.free && this.allowance(owner).used)
           throw new AppError(
-            "Your free search has already been used. Your saved results remain available for 24 hours; full research is coming later.",
+            "Your free search has already been used. Saved results are available for 24 hours after your search.",
             403,
           );
         if (

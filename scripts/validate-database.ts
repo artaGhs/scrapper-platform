@@ -117,9 +117,33 @@ async function main() {
       Array.from({ length: 10 }, () => advance(live.id, other, db, provider)),
     );
     assert.equal(starts, 1);
+    // The connected database can already contain real visitor reservations.
+    // Test one remaining reservation against that baseline without changing it.
+    const baseline = await sql`
+      SELECT
+        coalesce(sum(reserved) FILTER (WHERE created>${Date.now() - 3600_000}),0) AS hourly,
+        coalesce(sum(reserved),0) AS daily
+      FROM scrapper.scans
+      WHERE mode='live' AND created>${Date.now() - 86400_000}
+        AND NOT coalesce((body->>'developer')::boolean,false)
+    `;
+    const hourlyLimit = Number((Number(baseline[0].hourly) + 0.01).toFixed(6));
+    const dailyLimit = Number((Number(baseline[0].daily) + 0.01).toFixed(6));
     const reserved = await Promise.allSettled(
       budgetOwners.map((own) =>
-        db.create(own, randomUUID(), description, "live", 0.01, 0.02),
+        db.create(
+          own,
+          randomUUID(),
+          description,
+          "live",
+          0.01,
+          hourlyLimit,
+          ["reddit"],
+          {
+            ipHash: own,
+            dailyBudget: dailyLimit,
+          },
+        ),
       ),
     );
     assert.equal(
@@ -165,7 +189,13 @@ async function main() {
     await sql`DELETE FROM scrapper.scans WHERE owner=${owner} OR owner=${other} OR owner = ANY(${budgetOwners}) OR owner=${xOwner} OR owner=${xOther}`;
   }
 }
-main().catch(() => {
-  console.error("Database validation failed; connection details withheld.");
+main().catch((error: unknown) => {
+  const detail =
+    error instanceof assert.AssertionError
+      ? ` Assertion ${error.operator} failed${typeof error.actual === "number" && typeof error.expected === "number" ? ` (actual ${error.actual}, expected ${error.expected})` : ""}.`
+      : "";
+  console.error(
+    `Database validation failed; connection details withheld.${detail}`,
+  );
   process.exitCode = 1;
 });

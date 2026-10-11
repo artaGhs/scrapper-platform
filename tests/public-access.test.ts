@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { ScanStore } from "../lib/sqlite-store";
 import { clientFingerprint, failure } from "../lib/http";
-import { AppError } from "../lib/config";
+import { AppError, liveConfig } from "../lib/config";
 import { POST } from "../app/api/scans/route";
 import { publicScan } from "../lib/types";
 const description =
@@ -61,6 +61,20 @@ test("anonymous live admission needs no pilot code and starts no provider job", 
       }),
     );
     assert.equal(paid.status, 400);
+    for (const token of ["", "private-test-token"]) {
+      process.env.APIFY_TOKEN = token;
+      process.env.LIVE_SCAN_BUDGET_USD = "0";
+      assert.throws(
+        () => liveConfig(),
+        (error: unknown) => {
+          assert(error instanceof AppError);
+          assert.equal(error.status, 503);
+          assert.match(error.message, /temporarily unavailable/);
+          assert(!/LIVE_|APIFY|sample|operator|budget/i.test(error.message));
+          return true;
+        },
+      );
+    }
   } finally {
     globalThis.fetch = originalFetch;
     process.env = prior;

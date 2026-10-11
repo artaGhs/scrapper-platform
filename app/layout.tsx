@@ -9,7 +9,7 @@ const font = Host_Grotesk({
 export const metadata: Metadata = {
   title: "Scrapper — find a conversation worth joining",
   description:
-    "Describe your business and find public requests that overlap with what you offer. A bounded research prototype with clearly labeled sample examples.",
+    "Find Reddit conversations about the problem your business solves. Review original posts and comments, save relevant matches, and decide where to join in.",
 };
 export const viewport: Viewport = { themeColor: "#030a24" };
 export default function RootLayout({
