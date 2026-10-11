@@ -1,4 +1,5 @@
 import test from "node:test";
+import { foodPlan, modelResponse } from "./fixtures/query-plan";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -192,13 +193,32 @@ test("free production adapter uses ten candidates and one source job", async () 
   let starts = 0;
   Object.assign(process.env, {
     APIFY_TOKEN: "test-token",
+    GEMINI_API_KEY: "test-model-key",
     LIVE_SCAN_BUDGET_USD: "0.12",
     LIVE_HOURLY_BUDGET_USD: "1",
     LIVE_DAILY_BUDGET_USD: "5",
   });
-  delete process.env.GEMINI_API_KEY;
+  let plans = 0;
+  let reviews = 0;
   globalThis.fetch = async (url, init) => {
     const path = String(url);
+    if (path.includes("generativelanguage.googleapis.com")) {
+      const input = JSON.parse(init!.body as string);
+      const data = JSON.parse(input.contents[0].parts[0].text);
+      if (data.description) {
+        plans++;
+        return modelResponse(foodPlan);
+      }
+      reviews++;
+      return modelResponse({
+        assessments: data.posts.map((item: { id: string; text: string }) => ({
+          id: item.id,
+          decision: "accept",
+          signal: "recommendation",
+          evidence: item.text.split("\n")[0],
+        })),
+      });
+    }
     if (path.includes("/acts/")) {
       starts++;
       assert.match(path, /maxItems=10/);
@@ -239,7 +259,10 @@ test("free production adapter uses ten candidates and one source job", async () 
     );
     while (!terminalStages.includes(scan.stage))
       scan = await advance(scan.id, "owner", db);
+    assert.equal(plans, 1);
+    assert.equal(reviews, 1);
     assert.equal(starts, 1);
+    assert.equal(scan.business!.queryMethod, "Gemini draft");
     assert.equal(scan.results.length, 3);
   } finally {
     globalThis.fetch = oldFetch;

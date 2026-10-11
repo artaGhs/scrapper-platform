@@ -7,7 +7,7 @@ import {
 } from "./config";
 import { interpret, isDiscussionRecord, normalize, rank } from "./discovery";
 import { assessCandidates } from "./model-review";
-import type { draftQueries } from "./model";
+import { draftQueries } from "./model";
 import { RedditProvider } from "./provider";
 import { XProvider, xSearchQuery } from "./x-provider";
 import { sampleItems } from "./samples";
@@ -152,22 +152,28 @@ export async function advance(
       switch (scan.stage) {
         case "interpreting": {
           scan.business = interpret(scan.description);
-          // Deterministic source syntax keeps category recall; Gemini assesses returned context.
-          // The draft injection is retained only for legacy validation compatibility.
+          // Production Reddit searches require a model-generated plan. Injected
+          // provider-only fixtures remain offline; explicit draft injections test
+          // this stage without an external model call.
           if (
-            injectedDraft &&
             scan.mode === "live" &&
             scan.sources.includes("reddit") &&
-            process.env.GEMINI_API_KEY
+            (!injectedProvider || injectedDraft)
           ) {
+            const key = process.env.GEMINI_API_KEY?.trim();
             try {
-              scan.business = await injectedDraft(
+              if (!key) throw new Error("Planner key unavailable");
+              scan.business = await (injectedDraft || draftQueries)(
                 scan.business,
-                process.env.GEMINI_API_KEY,
+                key,
               );
             } catch {
-              scan.notice =
-                "The model could not draft grounded phrases. This search uses the keyword strategy instead.";
+              scan.business = undefined;
+              throw new AppError(
+                "The search could not be prepared. Please try again; no Reddit search was started.",
+                503,
+                true,
+              );
             }
           }
           for (const run of scan.sourceRuns) {
@@ -365,6 +371,21 @@ export async function advance(
   } catch (error) {
     scan.stage = "failed";
     scan.error = sourceError(error);
+    // Query preparation fails before source startup: release the reservation
+    // and leave the visitor's free allowance available, with no template fallback.
+    if (
+      error instanceof AppError &&
+      error.noJobStarted &&
+      !scan.startAttempted
+    ) {
+      if (scan.free && !scan.developer) await db.releaseFree(scan);
+      for (const run of scan.sourceRuns) {
+        if (!run.runId) {
+          run.status = "failed";
+          run.error = scan.error;
+        }
+      }
+    }
   }
   await db.save(scan);
   return scan;

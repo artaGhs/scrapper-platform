@@ -1,4 +1,5 @@
 import test from "node:test";
+import { foodPlan, modelResponse } from "./fixtures/query-plan";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -205,6 +206,7 @@ test("API authenticates developer bypass server-side, ignores forged client clai
   Object.assign(process.env, {
     SCAN_DB_PATH: join(dir, "scans.sqlite"),
     APIFY_TOKEN: "test-private-token",
+    GEMINI_API_KEY: "test-model-key",
     DEVELOPER_ACCESS_KEY: secret,
     LIVE_SCAN_BUDGET_USD: "0.12",
     LIVE_HOURLY_BUDGET_USD: "1",
@@ -212,9 +214,14 @@ test("API authenticates developer bypass server-side, ignores forged client clai
   });
   const originalFetch = globalThis.fetch;
   let calls = 0;
-  globalThis.fetch = async () => {
+  let plans = 0;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("generativelanguage.googleapis.com")) {
+      plans++;
+      return modelResponse(foodPlan);
+    }
     calls++;
-    throw Error("No provider or model call authorized");
+    throw Error("No source call authorized");
   };
   try {
     const anonymousCookie = `scrapper_session=${owner}`;
@@ -318,6 +325,7 @@ test("API authenticates developer bypass server-side, ignores forged client clai
       true,
     );
     assert.equal(calls, 0);
+    assert.equal(plans, 1);
   } finally {
     globalThis.fetch = originalFetch;
     process.env = prior;

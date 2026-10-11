@@ -279,7 +279,7 @@ test("completed retrieval with valid discussions but no fit is a genuine empty s
   }
 });
 
-test("live application stage passes grounded model queries to the provider and falls back on model failure", async () => {
+test("live application stage passes model queries to the provider and stops before source startup on model failure", async () => {
   const prior = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "test-key";
   try {
@@ -321,8 +321,10 @@ test("live application stage passes grounded model queries to the provider and f
         scan = await advance(scan.id, "owner", db, provider, model);
         await advance(scan.id, "owner", db, provider, model);
         if (fails) {
-          assert.match(scan.notice!, /keyword strategy/);
-          assert.notEqual(scan.business!.queryMethod, "Gemini draft");
+          assert.equal(scan.stage, "failed");
+          assert.match(scan.error!, /no Reddit search was started/);
+          assert.deepEqual(observed, []);
+          assert.equal(scan.business, undefined);
         } else {
           assert.deepEqual(observed, ["food calorie photo app"]);
           assert.equal(scan.business!.queryMethod, "Gemini draft");

@@ -1,4 +1,5 @@
 import test from "node:test";
+import { uptimePlan, modelResponse } from "./fixtures/query-plan";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -338,7 +339,7 @@ test("both live adapters share one reservation without multiplying the charge ca
     envNames.map((name) => [name, process.env[name]]),
   );
   process.env.APIFY_TOKEN = "test-token";
-  delete process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-model-key";
   process.env.LIVE_HOURLY_BUDGET_USD = "1";
   try {
     for (const total of [0.06, 0.08]) {
@@ -346,6 +347,8 @@ test("both live adapters share one reservation without multiplying the charge ca
       const calls: { source: string; cap: number; limit: number }[] = [];
       globalThis.fetch = async (url) => {
         const parsed = new URL(String(url));
+        if (parsed.hostname === "generativelanguage.googleapis.com")
+          return modelResponse(uptimePlan);
         const source = parsed.pathname.includes("twitter") ? "x" : "reddit";
         calls.push({
           source,

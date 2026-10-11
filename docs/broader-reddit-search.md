@@ -1,5 +1,7 @@
 # Broader Reddit discovery — October 11, 2026
 
+This records the earlier deterministic-query release. Production query planning has since been replaced with [Gemini-generated search plans](gemini-query-planning.md); the broader post/comment retrieval and provenance checks remain in use.
+
 The previous uptime queries repeated the exact phrase “uptime monitor” inside r/selfhosted. A successful ten-record retrieval could therefore contain promotions and hobbyist discussions without a suitable business need. Zero qualified records in that batch did not establish that Reddit had no relevant conversations.
 
 Known categories now use two Reddit-wide keyword/problem queries and one additional query across preferred communities. Generic businesses use three Reddit-wide keyword queries. The uptime plan covers website outages, noticing downtime and alerts, as well as uptime tools; its focused query covers r/selfhosted, r/webdev and r/sysadmin. Preferred communities are not a restriction on the global queries.
