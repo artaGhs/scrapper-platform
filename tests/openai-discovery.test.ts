@@ -70,13 +70,15 @@ test("source gating rejects invented permalinks, mislabeled comments and duplica
 test("incomplete responses are failures, not empty searches", () => {
   assert.throws(() => parseDiscovery({ ...response(), status: "incomplete" }));
 });
-test("two bounded parallel OpenAI requests uses medium reasoning, broad discovery and source validation", async () => {
+test("two bounded parallel OpenAI requests reserve output for concise results with low reasoning and source validation", async () => {
   let calls = 0;
   const fetcher: typeof fetch = async (_url, init) => {
     calls++;
     const request = JSON.parse(init!.body as string);
     assert.equal(request.model, "gpt-5.4-mini");
-    assert.equal(request.reasoning.effort, "medium");
+    assert.equal(request.reasoning.effort, "low");
+    assert.equal(request.text.verbosity, "low");
+    assert.equal(request.max_output_tokens, 8000);
     assert.equal(request.store, false);
     assert.equal(request.max_tool_calls, 3);
     assert.deepEqual(request.tools[0].filters.allowed_domains, ["reddit.com"]);

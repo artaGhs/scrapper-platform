@@ -196,7 +196,7 @@ async function discoverAngle(
     body: JSON.stringify({
       model: "gpt-5.4-mini",
       store: false,
-      reasoning: { effort: "medium" },
+      reasoning: { effort: "low" },
       max_tool_calls: 3,
       max_output_tokens: 8000,
       tools: [
@@ -217,6 +217,7 @@ async function discoverAngle(
         currentDate: new Date().toISOString().slice(0, 10),
       }),
       text: {
+        verbosity: "low",
         format: {
           type: "json_schema",
           name: "reddit_opportunities",
