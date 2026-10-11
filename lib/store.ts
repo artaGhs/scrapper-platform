@@ -30,6 +30,12 @@ export interface ScanRepository {
   claim(id: string, owner: string, leaseMs?: number): MaybePromise<boolean>;
   expiredLease(id: string, owner: string): MaybePromise<boolean>;
   save(scan: Scan, release?: boolean): MaybePromise<void>;
+  saveReply(
+    id: string,
+    owner: string,
+    resultId: string,
+    reply: string,
+  ): MaybePromise<string>;
   feedback(
     id: string,
     owner: string,

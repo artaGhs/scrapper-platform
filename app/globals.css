@@ -1069,6 +1069,53 @@ h2 {
   color: var(--muted);
   font-size: 14.5px;
 }
+.reply-draft {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--frost);
+}
+.reply-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.reply-button {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--signal);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.reply-button:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+.reply-draft textarea {
+  display: block;
+  width: 100%;
+  min-height: 130px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.reply-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
 .result-actions {
   display: flex;
   flex-wrap: wrap;

@@ -106,6 +106,31 @@ export class PostgresStore implements ScanRepository {
     await this
       .sql`UPDATE scrapper.scans SET body=${JSON.stringify(scan)}::jsonb, stage=${scan.stage}, lease=CASE WHEN ${release} THEN 0 ELSE lease END WHERE id=${scan.id} AND owner=${scan.owner}`;
   }
+  async saveReply(
+    id: string,
+    owner: string,
+    resultId: string,
+    reply: string,
+  ): Promise<string> {
+    // Only change this field, using the current row under its write lock.
+    const rows = await this.sql`
+      UPDATE scrapper.scans AS scan
+      SET body = jsonb_set(scan.body,
+        ARRAY['results', (SELECT (ordinality - 1)::text
+          FROM jsonb_array_elements(scan.body->'results') WITH ORDINALITY AS result(item, ordinality)
+          WHERE item->>'id' = ${resultId} LIMIT 1), 'suggestedReply'],
+        COALESCE((SELECT item->'suggestedReply'
+          FROM jsonb_array_elements(scan.body->'results') AS result(item)
+          WHERE item->>'id' = ${resultId} LIMIT 1), to_jsonb(${reply}::text)))
+      WHERE scan.id = ${id} AND scan.owner = ${owner}
+        AND scan.created > ${Date.now() - RETENTION_MS}
+        AND EXISTS (SELECT 1 FROM jsonb_array_elements(scan.body->'results') AS result(item)
+          WHERE item->>'id' = ${resultId})
+      RETURNING body`;
+    if (!rows.length) throw new AppError("Result not found or expired.", 404);
+    return (rows[0].body as Scan).results.find((item) => item.id === resultId)!
+      .suggestedReply!;
+  }
   async feedback(
     id: string,
     owner: string,

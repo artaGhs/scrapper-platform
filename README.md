@@ -6,6 +6,8 @@ The current OpenAI path targets seven to ten relevant posts or comments and show
 
 Describe a business, run a bounded search, and review conversations where someone asks for a relevant solution or discusses the problem you solve. Each match shows the original words and an explanation; you decide whether to participate manually and transparently.
 
+Each Reddit result, including earlier saved scans, has **Draft reply**. Drafts lead with a helpful response to the conversation and casually mention a relevant capability from the original scan description, using honest ownership language. A missing service name stays unnamed. Generated replies are saved with the result for the scan's retention period and can be copied; nothing is posted or sent to Reddit. Loading, retry and manual-copy fallback states are included. Drafting uses the server-only `OPENAI_API_KEY`, or `GEMINI_API_KEY` when OpenAI is not configured, and makes no model call until requested. Each request is capped at 1,600 output tokens and 30 seconds; requests are throttled to 12 per minute per connection. Draft model costs are separate from search reservations. No database migration is needed.
+
 **[Open the deployed MVP](https://scrapper-platform-khaki.vercel.app)**
 
 **Implemented MVP, October 11, 2026.** Reddit-only public launch: one description, a bounded live scan, original text/URLs/dates, source-supported fit, request/problem labels, and persistent Save / Not relevant feedback. Fictional sample research is restricted to authenticated developer access. Vercel uses free Neon Postgres; local development can use SQLite. The hosted calorie-photo example retrieved ten real posts and three manually verified relevant conversations for $0.08; coverage varies by category.
