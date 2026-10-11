@@ -64,7 +64,12 @@ export class ApifyProvider {
             : response.status === 429
               ? "The provider is rate-limiting requests. Try again later."
               : "The provider could not complete this request. Try again later.";
-      throw new AppError(reason, 502);
+      throw new AppError(
+        reason,
+        502,
+        /^acts\/.+\/runs\?/.test(path) &&
+          [400, 401, 402, 403, 404, 422, 429].includes(response.status),
+      );
     }
     try {
       return await response.json();
@@ -100,6 +105,8 @@ export class RedditProvider extends ApifyProvider {
     if (!Number.isFinite(this.itemLimit) || this.itemLimit < MIN_PROVIDER_ITEMS)
       throw new AppError(
         "This source requires at least 10 requested records. No provider job was started.",
+        400,
+        true,
       );
     if (
       !Number.isFinite(this.budget) ||
@@ -108,6 +115,8 @@ export class RedditProvider extends ApifyProvider {
     )
       throw new AppError(
         "This source needs a charge cap of at least $0.04 and at most $1. No provider job was started.",
+        400,
+        true,
       );
     const limit = Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit)));
     const params = new URLSearchParams({

@@ -22,3 +22,5 @@ Finish review: updated authorization and live evidence in PRODUCT.md, changed th
 Final Reddit-only release: preserve the desk and one description → Run action. No source selector. Show actual Reddit progress, source text and original links, honest date/age, request/problem labels, community scope, and review method. Sample scope is illustrative and never implies a live search. X/Instagram/TikTok deferred; YouTube outside scope. Future paid access must not fabricate extra results or imply checkout exists.
 
 Public release: live mode remains the default. Visitors describe the business and run research without a pilot code or provider keys. Shared daily capacity is disclosed beside Run research; server-side anonymous limits return clear retry messages.
+
+One small free search is offered per anonymous browser identity. Show up to three useful results, then a truthful free-search-used/full-research-coming-later state with saved results. No locked full-report expansion is collected for the free tier.

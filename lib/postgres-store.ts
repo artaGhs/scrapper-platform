@@ -8,6 +8,33 @@ export class PostgresStore implements ScanRepository {
   constructor(url: string) {
     this.sql = neon(url);
   }
+  async allowance(owner: string) {
+    const rows = await this
+      .sql`SELECT scan_id,consumed FROM scrapper.free_usage WHERE owner=${owner}`;
+    return { used: !!rows[0]?.consumed, scanId: rows[0]?.scan_id || null };
+  }
+  async consumeFree(scan: Scan) {
+    scan.startAttempted = true;
+    const rows = await this
+      .sql`WITH consumed AS (UPDATE scrapper.free_usage SET consumed=true WHERE owner=${scan.owner} AND scan_id=${scan.id} RETURNING owner) UPDATE scrapper.scans SET body=${JSON.stringify(scan)}::jsonb WHERE id=${scan.id} AND owner IN (SELECT owner FROM consumed) RETURNING id`;
+    if (!rows.length) {
+      scan.startAttempted = false;
+      throw new AppError(
+        "Your free search has already been used. Full research is coming later.",
+        403,
+      );
+    }
+  }
+  async releaseFree(scan: Scan) {
+    scan.startAttempted = false;
+    scan.reservedUsd = 0;
+    await this.sql.transaction([
+      this
+        .sql`UPDATE scrapper.free_usage SET consumed=false WHERE owner=${scan.owner} AND scan_id=${scan.id}`,
+      this
+        .sql`UPDATE scrapper.scans SET reserved=0,body=${JSON.stringify(scan)}::jsonb WHERE id=${scan.id} AND owner=${scan.owner}`,
+    ]);
+  }
   async throttle(ipHash: string, maxRequests = 30) {
     const minute = Math.floor(Date.now() / 60_000);
     await this
@@ -37,6 +64,7 @@ export class PostgresStore implements ScanRepository {
   ): Promise<Scan> {
     const now = Date.now();
     const scan: Scan = {
+      free: admission?.free,
       id: randomUUID(),
       owner,
       key,

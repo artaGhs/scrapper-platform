@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { AppError, liveConfig } from "@/lib/config";
+import { AppError, FREE_SOURCE_BUDGET_USD, liveConfig } from "@/lib/config";
 import {
   attachSession,
   clientFingerprint,
@@ -14,17 +14,19 @@ import {
 import { store } from "@/lib/store";
 import { publicScan, selectedSources } from "@/lib/types";
 export const runtime = "nodejs";
-const schema = z.object({
-  description: z.string().trim().min(20).max(1500),
-  mode: z.enum(["sample", "live"]),
-  key: z.string().uuid(),
-  sources: z
-    .array(z.enum(["reddit"]))
-    .min(1)
-    .max(1)
-    .refine((values) => new Set(values).size === values.length)
-    .optional(),
-});
+const schema = z
+  .object({
+    description: z.string().trim().min(20).max(1500),
+    mode: z.enum(["sample", "live"]),
+    key: z.string().uuid(),
+    sources: z
+      .array(z.enum(["reddit"]))
+      .min(1)
+      .max(1)
+      .refine((values) => new Set(values).size === values.length)
+      .optional(),
+  })
+  .strict();
 export async function POST(request: NextRequest) {
   try {
     sameOrigin(request);
@@ -44,10 +46,12 @@ export async function POST(request: NextRequest) {
       input.data.key,
       input.data.description,
       input.data.mode,
-      config?.budget || 0,
+      config ? Math.min(config.budget, FREE_SOURCE_BUDGET_USD) : 0,
       config?.hourlyBudget,
       sources,
-      config ? { ipHash, dailyBudget: config.dailyBudget } : undefined,
+      config
+        ? { ipHash, dailyBudget: config.dailyBudget, free: true }
+        : undefined,
     );
     return attachSession(json(publicScan(scan), 201), owner, request);
   } catch (error) {

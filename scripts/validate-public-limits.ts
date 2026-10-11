@@ -77,9 +77,20 @@ async function main() {
       ["reddit"],
       admission,
     );
+    for (let i = 2; i < 10; i++)
+      await db.create(
+        prefix + i,
+        randomUUID(),
+        description,
+        "live",
+        0.001,
+        10,
+        ["reddit"],
+        admission,
+      );
     await assert.rejects(
       db.create(
-        prefix + "c",
+        prefix + "eleven",
         randomUUID(),
         description,
         "live",
@@ -88,17 +99,92 @@ async function main() {
         ["reddit"],
         admission,
       ),
-      /two live searches per hour/,
+      /ten live searches per hour/,
     );
     assert.equal(await db.get(first.id, prefix + "stranger"), null);
+    await clean();
+    const freeOwner = prefix + "free";
+    const freeAdmission = {
+      ipHash: prefix + "free",
+      dailyBudget: 10,
+      free: true,
+    };
+    const free = await db.create(
+      freeOwner,
+      randomUUID(),
+      description,
+      "live",
+      0.001,
+      10,
+      ["reddit"],
+      freeAdmission,
+    );
+    assert.equal((await db.allowance(freeOwner)).used, false);
+    // Simulated start marker only; there is deliberately no provider request.
+    await db.consumeFree(free);
+    free.stage = "empty";
+    await db.save(free);
+    assert.equal(
+      (await new PostgresStore(process.env.DATABASE_URL).allowance(freeOwner))
+        .used,
+      true,
+    );
+    await assert.rejects(
+      db.create(
+        freeOwner,
+        randomUUID(),
+        description + " Different",
+        "live",
+        0.001,
+        10,
+        ["reddit"],
+        freeAdmission,
+      ),
+      /free search has already been used/,
+    );
+    assert.equal(
+      (
+        await db.create(
+          freeOwner,
+          free.key,
+          description,
+          "live",
+          0.001,
+          10,
+          ["reddit"],
+          freeAdmission,
+        )
+      ).id,
+      free.id,
+    );
+    await db.releaseFree(free);
+    free.stage = "failed";
+    await db.save(free);
+    assert.equal((await db.allowance(freeOwner)).used, false);
+    assert.notEqual(
+      (
+        await db.create(
+          freeOwner,
+          randomUUID(),
+          description,
+          "live",
+          0.001,
+          10,
+          ["reddit"],
+          freeAdmission,
+        )
+      ).id,
+      free.id,
+    );
     for (let i = 0; i < 30; i++) await db.throttle(prefix);
     await assert.rejects(db.throttle(prefix), /Wait one minute/);
     console.log(
-      "Neon public admission passed: atomic daily reservations, shared connection limits, idempotency, ownership and request throttle. Zero provider/model calls.",
+      "Neon public admission passed: atomic daily reservations, ten-search connection cap, durable one-free allowance, safe unused reservation release/retry, idempotency, ownership and request throttle. Zero provider/model calls.",
     );
   } finally {
     await clean();
     await sql`DELETE FROM scrapper.request_limits WHERE ip_hash=${prefix}`;
+    await sql`DELETE FROM scrapper.free_usage WHERE starts_with(owner,${prefix})`;
   }
 }
 main().catch(() => {

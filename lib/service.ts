@@ -1,4 +1,10 @@
-import { AppError, liveConfig, SCAN_TIMEOUT_MS } from "./config";
+import {
+  AppError,
+  FREE_RESULT_LIMIT,
+  liveConfig,
+  MIN_PROVIDER_ITEMS,
+  SCAN_TIMEOUT_MS,
+} from "./config";
 import { interpret, isDiscussionRecord, normalize, rank } from "./discovery";
 import { assessCandidates } from "./model-review";
 import type { draftQueries } from "./model";
@@ -74,6 +80,7 @@ export async function advance(
         run.error = current.error;
       }
     if (current.sourceRuns?.length) finishRetrieval(current);
+    if (current.free && !current.startAttempted) await db.releaseFree(current);
     await db.save(current);
     return current;
   }
@@ -116,7 +123,7 @@ export async function advance(
           config.token,
           budget,
           fetch,
-          scan.sources!.length === 2 ? 40 : 50,
+          scan.free ? MIN_PROVIDER_ITEMS : scan.sources!.length === 2 ? 40 : 50,
         )
       : new XProvider(config.token, budget);
   };
@@ -138,6 +145,7 @@ export async function advance(
             "The source reached its time limit; this does not confirm an empty search.";
         }
       finishRetrieval(scan);
+      if (scan.free && !scan.startAttempted) await db.releaseFree(scan);
     } else
       switch (scan.stage) {
         case "interpreting": {
@@ -177,9 +185,9 @@ export async function advance(
             if (scan.mode === "sample") run.status = "searching";
             else
               try {
-                const started = await providerFor(run.source).start(
-                  scan.business!,
-                );
+                const provider = providerFor(run.source);
+                if (scan.free) await db.consumeFree(scan);
+                const started = await provider.start(scan.business!);
                 run.runId = started.id;
                 run.datasetId = started.defaultDatasetId;
                 run.status = "searching";
@@ -189,6 +197,12 @@ export async function advance(
                   scan.datasetId = started.defaultDatasetId;
                 }
               } catch (error) {
+                if (
+                  scan.free &&
+                  (!scan.startAttempted ||
+                    (error instanceof AppError && error.noJobStarted))
+                )
+                  await db.releaseFree(scan);
                 run.status = "failed";
                 run.error = sourceError(error);
               }
@@ -305,12 +319,16 @@ export async function advance(
             }
           }
           scan.reviewComplete = true;
+          if (scan.free)
+            scan.results = scan.results.slice(0, FREE_RESULT_LIMIT);
           scan.stage = "ranking";
           break;
         }
         case "ranking":
           if (!scan.reviewComplete)
             scan.results = rank(scan.items || [], scan.business!);
+          if (scan.free)
+            scan.results = scan.results.slice(0, FREE_RESULT_LIMIT);
           scan.items = undefined;
           scan.stage = scan.partial
             ? "partial"

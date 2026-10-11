@@ -47,6 +47,20 @@ test("anonymous live admission needs no pilot code and starts no provider job", 
     assert.ok(!JSON.stringify(scan).includes("private-test-token"));
     assert.ok(!JSON.stringify(scan).includes("obsolete-code"));
     assert.ok(!("ipHash" in scan));
+    const paid = await POST(
+      new NextRequest("http://localhost/api/scans", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          description,
+          mode: "live",
+          key: randomUUID(),
+          tier: "paid",
+          entitled: true,
+        }),
+      }),
+    );
+    assert.equal(paid.status, 400);
   } finally {
     globalThis.fetch = originalFetch;
     process.env = prior;
@@ -119,10 +133,21 @@ test("live connection limit survives replacing the anonymous session, while retr
       ["reddit"],
       admission,
     );
+    for (let i = 2; i < 10; i++)
+      db.create(
+        "owner" + i,
+        randomUUID(),
+        description,
+        "live",
+        0.08,
+        1,
+        ["reddit"],
+        admission,
+      );
     assert.throws(
       () =>
         db.create(
-          "three",
+          "eleven",
           randomUUID(),
           description,
           "live",
@@ -131,7 +156,7 @@ test("live connection limit survives replacing the anonymous session, while retr
           ["reddit"],
           admission,
         ),
-      /two live searches per hour/,
+      /ten live searches per hour/,
     );
     assert.ok(!JSON.stringify(publicScan(first)).includes("same-connection"));
   } finally {

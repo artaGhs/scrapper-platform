@@ -268,7 +268,7 @@ test("launch is Reddit only and preserves real provenance on partial retrieval",
   await expect(page.locator("article")).toContainText("Keyword rules");
 });
 
-test("additional-result preview shows only actual counts and no fabricated checkout", async ({
+test("free search restores saved results without a full-report expansion", async ({
   page,
 }) => {
   const results = Array.from({ length: 3 }, (_, index) => ({
@@ -294,17 +294,41 @@ test("additional-result preview shows only actual counts and no fabricated check
     sources: ["reddit"],
     stage: "complete",
     results,
-    matchCount: 5,
-    lockedCount: 2,
+    free: true,
+    freeSearchUsed: true,
+    matchCount: 3,
+    lockedCount: 0,
     retrieved: 10,
   };
-  await page.route("**/api/scans", (route) =>
+  let used = false;
+  let starts = 0;
+  await page.route("**/api/session", (route) =>
     route.fulfill({
-      status: 201,
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ready: true,
+        freeSearchUsed: used,
+        freeScanId: used ? scan.id : null,
+      }),
+    }),
+  );
+  await page.route("**/api/scans/preview-test", (route) =>
+    route.fulfill({
+      status: 200,
       contentType: "application/json",
       body: JSON.stringify(scan),
     }),
   );
+  await page.route("**/api/scans", (route) => {
+    starts++;
+    used = true;
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(scan),
+    });
+  });
   await page.goto("/");
   await page.getByRole("button", { name: "Food photo app" }).click();
   await page.getByLabel("Live search", { exact: true }).check();
@@ -312,8 +336,26 @@ test("additional-result preview shows only actual counts and no fabricated check
   await expect(page.locator("article")).toHaveCount(3);
   await expect(
     page.getByRole("region", { name: "Additional results preview" }),
-  ).toContainText("5 matches found");
-  await expect(page.locator(".locked-preview")).toHaveCount(2);
+  ).toHaveCount(0);
+  await expect(page.locator(".locked-preview")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Free search used", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Start over" }).click();
+  await expect(
+    page.getByText(
+      "Your free search has been used. Full research is coming later.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "View your free results" }).click();
+  await expect(page.locator("article")).toHaveCount(3);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator("article")).toHaveCount(3);
+  await expect(
+    page.getByRole("button", { name: "Free search used", exact: true }),
+  ).toBeDisabled();
+  expect(starts).toBe(1);
   await expect(
     page.getByRole("button", { name: /subscribe|unlock|buy/i }),
   ).toHaveCount(0);

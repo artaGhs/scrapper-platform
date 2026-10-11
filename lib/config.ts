@@ -1,6 +1,8 @@
 import type { Source } from "./types";
 export const MAX_ITEMS = 50;
 export const MIN_PROVIDER_ITEMS = 10;
+export const FREE_RESULT_LIMIT = 3;
+export const FREE_SOURCE_BUDGET_USD = 0.08;
 export const MIN_PROVIDER_BUDGET_USD = 0.04;
 export const SCAN_TIMEOUT_MS = 210_000;
 export const PROVIDER_TIMEOUT_SECONDS = 180;
@@ -9,6 +11,7 @@ export class AppError extends Error {
   constructor(
     message: string,
     public status = 400,
+    public noJobStarted = false,
   ) {
     super(message);
   }

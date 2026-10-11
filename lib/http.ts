@@ -19,7 +19,7 @@ export function attachSession(
     sameSite: "strict",
     secure: request.nextUrl.protocol === "https:",
     path: "/",
-    maxAge: 86400,
+    maxAge: 30 * 86400,
   });
   return response;
 }

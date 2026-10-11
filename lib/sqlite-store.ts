@@ -24,9 +24,58 @@ export class ScanStore {
     this.db.exec(
       "CREATE TABLE IF NOT EXISTS request_limits (ip_hash TEXT NOT NULL, minute INTEGER NOT NULL, used INTEGER NOT NULL, PRIMARY KEY(ip_hash,minute))",
     );
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS free_usage (owner TEXT PRIMARY KEY, scan_id TEXT NOT NULL, consumed INTEGER NOT NULL DEFAULT 0)",
+    );
   }
   close() {
     this.db.close();
+  }
+  allowance(owner: string) {
+    const row = this.db
+      .prepare("SELECT scan_id,consumed FROM free_usage WHERE owner=?")
+      .get(owner);
+    return { used: !!row?.consumed, scanId: row ? String(row.scan_id) : null };
+  }
+  consumeFree(scan: Scan): void {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.db
+        .prepare(
+          "UPDATE free_usage SET consumed=1 WHERE owner=? AND scan_id=? RETURNING owner",
+        )
+        .get(scan.owner, scan.id);
+      if (!row)
+        throw new AppError(
+          "Your free search has already been used. Full research is coming later.",
+          403,
+        );
+      scan.startAttempted = true;
+      this.db
+        .prepare("UPDATE scans SET body=? WHERE id=? AND owner=?")
+        .run(JSON.stringify(scan), scan.id, scan.owner);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+  releaseFree(scan: Scan): void {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db
+        .prepare("UPDATE free_usage SET consumed=0 WHERE owner=? AND scan_id=?")
+        .run(scan.owner, scan.id);
+      scan.startAttempted = false;
+      scan.reservedUsd = 0;
+      this.db
+        .prepare("UPDATE scans SET reserved=0,body=? WHERE id=? AND owner=?")
+        .run(JSON.stringify(scan), scan.id, scan.owner);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   throttle(ipHash: string, maxRequests = 30): void {
     const minute = Math.floor(Date.now() / 60_000);
@@ -68,7 +117,7 @@ export class ScanStore {
         .run(now - RETENTION_MS);
       const duplicate = this.db
         .prepare(
-          `SELECT body FROM scans WHERE owner=? AND (idem=? OR (description=? AND mode=? AND COALESCE(json_extract(body, '$.sources'), '["reddit"]')=? AND created>?)) ORDER BY created DESC LIMIT 1`,
+          `SELECT body FROM scans WHERE owner=? AND (idem=? OR (description=? AND mode=? AND COALESCE(json_extract(body, '$.sources'), '["reddit"]')=? AND created>? AND NOT (stage='failed' AND COALESCE(json_extract(body,'$.free'),0)=1 AND COALESCE(json_extract(body,'$.startAttempted'),0)=0))) ORDER BY created DESC LIMIT 1`,
         )
         .get(
           owner,
@@ -113,6 +162,11 @@ export class ScanStore {
           429,
         );
       if (mode === "live") {
+        if (admission?.free && this.allowance(owner).used)
+          throw new AppError(
+            "Your free search has already been used. Your saved results remain available for 24 hours; full research is coming later.",
+            403,
+          );
         if (
           Number(
             this.db
@@ -125,10 +179,10 @@ export class ScanStore {
                 admission?.ipHash || null,
                 admission?.ipHash || null,
               )?.n,
-          ) >= 2
+          ) >= 10
         )
           throw new AppError(
-            "This session or connection has reached its limit of two live searches per hour. Try again in an hour.",
+            "This connection has reached its limit of ten live searches per hour. Try again in an hour.",
             429,
           );
         const spent = this.db
@@ -188,6 +242,7 @@ export class ScanStore {
           .run(month);
       }
       const scan: Scan = {
+        free: admission?.free,
         id: randomUUID(),
         owner,
         key,
@@ -217,6 +272,12 @@ export class ScanStore {
           JSON.stringify(scan),
           admission?.ipHash || null,
         );
+      if (scan.free)
+        this.db
+          .prepare(
+            "INSERT INTO free_usage(owner,scan_id,consumed) VALUES(?,?,0) ON CONFLICT(owner) DO UPDATE SET scan_id=excluded.scan_id,consumed=0",
+          )
+          .run(owner, scan.id);
       this.db.exec("COMMIT");
       return scan;
     } catch (error) {

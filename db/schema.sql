@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS scrapper.request_limits (ip_hash text NOT NULL, minut
 -- statement
 REVOKE ALL ON scrapper.request_limits FROM PUBLIC;
 -- statement
+CREATE TABLE IF NOT EXISTS scrapper.free_usage (owner text PRIMARY KEY, scan_id text NOT NULL, consumed boolean NOT NULL DEFAULT false);
+-- statement
+REVOKE ALL ON scrapper.free_usage FROM PUBLIC;
+-- statement
 CREATE TABLE IF NOT EXISTS scrapper.source_usage (source text NOT NULL, month text NOT NULL, used integer NOT NULL, PRIMARY KEY(source,month));
 -- statement
 REVOKE ALL ON scrapper.source_usage FROM PUBLIC;
@@ -31,7 +35,7 @@ BEGIN
  candidate := candidate - 'admission';
  DELETE FROM scrapper.scans WHERE created < stamp-86400000;
  SELECT body INTO prior FROM scrapper.scans WHERE owner=own AND
- (idem=candidate->>'key' OR (description=candidate->>'description' AND mode=candidate->>'mode' AND coalesce(body->'sources','["reddit"]'::jsonb)=coalesce(candidate->'sources','["reddit"]'::jsonb) AND created>stamp-120000)) ORDER BY created DESC LIMIT 1;
+ (idem=candidate->>'key' OR (description=candidate->>'description' AND mode=candidate->>'mode' AND coalesce(body->'sources','["reddit"]'::jsonb)=coalesce(candidate->'sources','["reddit"]'::jsonb) AND created>stamp-120000 AND NOT (stage='failed' AND coalesce((body->>'free')::boolean,false) AND NOT coalesce((body->>'startAttempted')::boolean,false)))) ORDER BY created DESC LIMIT 1;
  IF prior IS NOT NULL THEN
   IF prior->>'key'=candidate->>'key' AND (prior->>'description'<>candidate->>'description' OR prior->>'mode'<>candidate->>'mode' OR coalesce(prior->'sources','["reddit"]'::jsonb)<>coalesce(candidate->'sources','["reddit"]'::jsonb)) THEN
    RETURN jsonb_build_object('error','This run key belongs to another request. Start a new search.','status',409);
@@ -44,8 +48,11 @@ BEGIN
  IF (SELECT count(*) FROM scrapper.scans WHERE owner=own AND created>stamp-3600000)>=20 THEN
   RETURN jsonb_build_object('error','This session has reached its hourly search limit. Try again later.','status',429);
  END IF;
- IF candidate->>'mode'='live' AND (SELECT count(*) FROM scrapper.scans WHERE mode='live' AND created>stamp-3600000 AND (owner=own OR (fingerprint IS NOT NULL AND ip_hash=fingerprint)))>=2 THEN
-  RETURN jsonb_build_object('error','This session or connection has reached its limit of two live searches per hour. Try again in an hour.','status',429);
+ IF coalesce((candidate->>'free')::boolean,false) AND EXISTS(SELECT 1 FROM scrapper.free_usage WHERE owner=own AND consumed) THEN
+  RETURN jsonb_build_object('error','Your free search has already been used. Your saved results remain available for 24 hours; full research is coming later.','status',403);
+ END IF;
+ IF candidate->>'mode'='live' AND (SELECT count(*) FROM scrapper.scans WHERE mode='live' AND created>stamp-3600000 AND (owner=own OR (fingerprint IS NOT NULL AND ip_hash=fingerprint)))>=10 THEN
+  RETURN jsonb_build_object('error','This connection has reached its limit of ten live searches per hour. Try again in an hour.','status',429);
  END IF;
  IF candidate->>'mode'='live' AND (SELECT coalesce(sum(reserved),0) FROM scrapper.scans WHERE mode='live' AND created>stamp-86400000)+(candidate->>'reservedUsd')::numeric>daily_budget THEN
   RETURN jsonb_build_object('error','Today''s research capacity is full. Try again tomorrow; no source job was started.','status',429);
@@ -65,6 +72,9 @@ BEGIN
  END IF;
  INSERT INTO scrapper.scans(id,owner,idem,mode,description,stage,created,reserved,body,ip_hash)
  VALUES(candidate->>'id',own,candidate->>'key',candidate->>'mode',candidate->>'description',candidate->>'stage',stamp,(candidate->>'reservedUsd')::numeric,candidate,fingerprint);
+ IF coalesce((candidate->>'free')::boolean,false) THEN
+  INSERT INTO scrapper.free_usage(owner,scan_id,consumed) VALUES(own,candidate->>'id',false) ON CONFLICT(owner) DO UPDATE SET scan_id=excluded.scan_id,consumed=false;
+ END IF;
  RETURN candidate;
 END $$;
 -- statement

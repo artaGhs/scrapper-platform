@@ -4,8 +4,16 @@ type MaybePromise<T> = T | Promise<T>;
 export interface Admission {
   ipHash: string;
   dailyBudget: number;
+  free?: boolean;
+}
+export interface FreeAllowance {
+  used: boolean;
+  scanId: string | null;
 }
 export interface ScanRepository {
+  allowance(owner: string): MaybePromise<FreeAllowance>;
+  consumeFree(scan: Scan): MaybePromise<void>;
+  releaseFree(scan: Scan): MaybePromise<void>;
   throttle(ipHash: string, maxRequests?: number): MaybePromise<void>;
   get(id: string, owner: string): MaybePromise<Scan | null>;
   create(

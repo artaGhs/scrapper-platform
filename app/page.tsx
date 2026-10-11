@@ -210,6 +210,8 @@ export default function Home() {
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
   const [ready, setReady] = useState(false);
+  const [freeSearchUsed, setFreeSearchUsed] = useState(false);
+  const [freeScanId, setFreeScanId] = useState<string | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState(false);
   const [filter, setFilter] = useState<"all" | "saved">("all");
   const [pollPaused, setPollPaused] = useState(false);
@@ -220,6 +222,10 @@ export default function Home() {
 
   const remember = useCallback((next: PublicScan) => {
     setScan(next);
+    if (next.free) {
+      setFreeSearchUsed(!!next.freeSearchUsed);
+      setFreeScanId(next.id);
+    }
     try {
       localStorage.setItem("scrapper-scan", JSON.stringify({ id: next.id }));
     } catch {
@@ -232,15 +238,21 @@ export default function Home() {
     let active = true;
     async function bootstrap() {
       try {
-        await request("/api/session");
+        const allowance = await request<{
+          freeSearchUsed: boolean;
+          freeScanId: string | null;
+        }>("/api/session");
         if (!active) return;
         setReady(true);
+        setFreeSearchUsed(allowance.freeSearchUsed);
+        setFreeScanId(allowance.freeScanId);
         let cached: { id?: string } = {};
         try {
           cached = JSON.parse(localStorage.getItem("scrapper-scan") || "{}");
         } catch {
           /* Optional storage. */
         }
+        if (allowance.freeScanId) cached.id = allowance.freeScanId;
         if (cached.id) {
           try {
             const previous = await request<PublicScan>(
@@ -339,9 +351,33 @@ export default function Home() {
       setError(
         issue instanceof Error ? issue.message : "Could not start this search.",
       );
+      try {
+        const allowance = await request<{
+          freeSearchUsed: boolean;
+          freeScanId: string | null;
+        }>("/api/session");
+        setFreeSearchUsed(allowance.freeSearchUsed);
+        setFreeScanId(allowance.freeScanId);
+      } catch {
+        /* Keep the original request error. */
+      }
     } finally {
       setStarting(false);
       submitLock.current = false;
+    }
+  }
+  async function restoreFreeResults() {
+    if (!freeScanId) return;
+    try {
+      const previous = await request<PublicScan>(`/api/scans/${freeScanId}`);
+      remember(previous);
+      setMode("live");
+      setDescription(previous.description);
+      setError("");
+    } catch {
+      setError(
+        "Free results are retained for 24 hours and are no longer available in this browser.",
+      );
     }
   }
   function changeDescription(value: string) {
@@ -527,14 +563,25 @@ export default function Home() {
                 <p>
                   {mode === "sample"
                     ? "Fictional examples. No live search or original post links."
-                    : "Reddit: up to 50 records. Shared daily capacity applies."}
+                    : freeSearchUsed
+                      ? "Your free search has been used. Full research is coming later."
+                      : "One free Reddit search. Up to three useful results."}
                 </p>
                 <button
                   className="run-button"
-                  disabled={busy || !ready || description.trim().length < 20}
+                  disabled={
+                    busy ||
+                    !ready ||
+                    description.trim().length < 20 ||
+                    (mode === "live" && freeSearchUsed)
+                  }
                   type="submit"
                 >
-                  {busy ? "Working" : "Run research"}
+                  {busy
+                    ? "Working"
+                    : mode === "live" && freeSearchUsed
+                      ? "Free search used"
+                      : "Run research"}
                   {busy ? (
                     <span className="button-spinner" aria-hidden="true" />
                   ) : (
@@ -542,6 +589,16 @@ export default function Home() {
                   )}
                 </button>
               </div>
+              {freeSearchUsed &&
+                freeScanId &&
+                (!scan || scan.mode !== "live") && (
+                  <button
+                    type="button"
+                    onClick={() => void restoreFreeResults()}
+                  >
+                    View your free results
+                  </button>
+                )}
             </form>
           </div>
         </section>
