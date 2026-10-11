@@ -19,9 +19,9 @@ const schema = z.object({
   mode: z.enum(["sample", "live"]),
   key: z.string().uuid(),
   sources: z
-    .array(z.enum(["reddit", "x"]))
+    .array(z.enum(["reddit"]))
     .min(1)
-    .max(2)
+    .max(1)
     .refine((values) => new Set(values).size === values.length)
     .optional(),
 });

@@ -59,46 +59,99 @@ function words(value: string): string[] {
 }
 export function interpret(description: string): Business {
   const category = categories.find((item) => item.triggers.test(description));
-  // Only query features stated in the input. This is a disclosed lexical strategy, not an LLM.
-  if (category) {
-    const featureTerms = category.features.filter((term) =>
-      description.toLowerCase().includes(term),
-    );
-    const terms = category.terms.filter((term) =>
-      description.toLowerCase().includes(term),
-    );
-    const subject = terms.length ? terms : [category.terms[0]];
-    const queries = featureTerms.length
+  const terms = category
+    ? category.terms.filter((term) => description.toLowerCase().includes(term))
+    : words(description).slice(0, 8);
+  const featureTerms = category
+    ? category.features.filter((term) =>
+        description.toLowerCase().includes(term),
+      )
+    : [];
+  const phrase =
+    category?.name === "Food & calorie tracking"
+      ? /calorie/i.test(description)
+        ? "calorie tracking"
+        : "nutrition tracking"
+      : category?.name === "Shopify & email marketing"
+        ? /discount/i.test(description)
+          ? "Shopify discount"
+          : /cart/i.test(description)
+            ? "Shopify cart"
+            : "Shopify app"
+        : category?.name === "Website uptime monitoring"
+          ? "uptime monitor"
+          : terms.slice(0, 3).join(" ");
+  // Retrieve category and problem language; qualify requests and first-person problems afterwards.
+  const queryPlans: NonNullable<Business["queryPlans"]> =
+    category?.name === "Food & calorie tracking"
       ? [
-          ...new Set(
-            featureTerms.slice(0, 3).map((term) => `${subject[0]} ${term} app`),
-          ),
+          {
+            phrase: '("calorie tracking" OR "calorie counting") AND app',
+            signal: "recommendation",
+            rationale:
+              "Calorie-app discussions, without requiring a particular request phrase.",
+          },
+          {
+            phrase: featureTerms.some((term) =>
+              ["photo", "picture", "camera"].includes(term),
+            )
+              ? "(food OR meal) AND (photo OR picture) AND (logging OR tracking OR calories)"
+              : '"food logging" AND app',
+            signal: "recommendation",
+            rationale:
+              "Food-photo logging context using capabilities stated in the description.",
+          },
+          {
+            phrase:
+              '("tracking meals" OR "food logging") AND (difficult OR struggling OR recommend OR app)',
+            signal: "problem",
+            rationale:
+              "Meal-tracking problems and app discussions; complaints are not buying certainty.",
+          },
         ]
       : [
-          `${subject.join(" ")} tool`,
-          `${subject[0]} recommendation`,
-          `${subject[0]} alternative`,
+          {
+            phrase: `"${phrase}"`,
+            signal: "recommendation",
+            rationale:
+              "A focused product category; context is checked after retrieval.",
+          },
+          {
+            phrase: `"${phrase}" AND alternative`,
+            signal: "alternative",
+            rationale: "Replacement language without inventing a competitor.",
+          },
+          {
+            phrase: `"${phrase}" AND (problem OR recommend OR struggling)`,
+            signal: "problem",
+            rationale: "Category-specific problems or recommendations.",
+          },
         ];
-    return {
-      category: category.name,
-      summary: description,
-      terms: subject,
-      featureTerms,
-      queries,
-    };
+  const communities =
+    category?.name === "Food & calorie tracking"
+      ? ["caloriecount", "loseit"]
+      : category?.name === "Shopify & email marketing"
+        ? ["shopify"]
+        : category?.name === "Website uptime monitoring"
+          ? ["selfhosted"]
+          : [];
+  const scope = communities.length
+    ? ` AND (${communities.map((name) => `subreddit:${name}`).join(" OR ")})`
+    : "";
+  for (const plan of queryPlans) {
+    plan.phrase += scope;
+    if (communities.length)
+      plan.rationale += ` Scoped to ${communities.map((name) => `r/${name}`).join(" and ")}.`;
   }
-  const terms = words(description).slice(0, 8);
-  const subject = terms.slice(0, 3).join(" ");
   return {
-    category: "Your described business",
+    category: category?.name || "Your described business",
     summary: description,
-    terms,
-    featureTerms: [],
-    queries: [
-      `${subject} tool`,
-      `${subject} recommendation`,
-      `${subject} alternative`,
-    ],
+    terms: terms.length ? terms : [category?.terms[0] || phrase],
+    featureTerms,
+    categoryPhrase: phrase,
+    communities,
+    queries: queryPlans.map((plan) => plan.phrase),
+    queryPlans,
   };
 }
 
@@ -212,7 +265,12 @@ export function normalize(
         : url.match(/\/comments\/([a-z0-9]+)/i)?.[1] || url;
     if (seen.has(thread) || texts.has(combined)) continue;
     const publishedAt = publication(row.createdAt ?? row.created_utc);
-    if (publishedAt && now - Date.parse(publishedAt) > 30 * 86400_000) continue;
+    if (
+      publishedAt &&
+      now - Date.parse(publishedAt) >
+        (source === "reddit" ? 365 : 30) * 86400_000
+    )
+      continue;
     if (text === "[deleted]" || text === "[removed]") continue;
     seen.add(thread);
     texts.add(combined);
@@ -235,7 +293,7 @@ export function normalize(
   return output;
 }
 const request =
-  /\b(?:is there|are there|anyone (?:know|recommend|using)|can (?:anyone|someone)|looking for|recommend(?:ation|ations)?|suggest(?:ion|ions)?|alternative(?:s)?|need (?:an?|some|help)|how (?:do|can) I|what (?:app|tool)|wish there|tired of|takes too long|struggling with)\b/i;
+  /\b(?:is there|are there|anyone (?:know|recommend|using)|can (?:anyone|someone)|looking for|recommend(?:ation|ations)?|suggest(?:ion|ions)?|alternative(?:s)?|need (?:an?|some|help)|how (?:do|can) I|what (?:app|tool)|wish there|tired of|takes too long|struggling with|hard to|difficult to|trouble (?:with|tracking)|hate (?:tracking|logging)|forget to (?:log|track))\b/i;
 export function rank(
   items: SourceItem[],
   business: Business,
@@ -250,8 +308,14 @@ export function rank(
       .find((sentence) => request.test(sentence));
     if (
       !evidence ||
-      /\b(?:use my|try my|i built|we launched|sponsored|affiliate link)\b/i.test(
+      /\b(?:use my|try my|i built|we launched|sponsored|affiliate link|promo code|sign up now|buy now|dm me|we just launched|just shipped|i just built|we built|our app is|check out my)\b/i.test(
         content,
+      )
+    )
+      continue;
+    if (
+      /\b(?:not looking for|not asking for|do not need|don['’]t need)\b/i.test(
+        evidence,
       )
     )
       continue;
@@ -263,7 +327,40 @@ export function rank(
     const features = business.featureTerms.filter((term) =>
       lowered.includes(term),
     );
-    if (!terms.length || (business.featureTerms.length && !features.length))
+    const domainFit =
+      business.category === "Food & calorie tracking"
+        ? /\b(?:calories?|nutrition|meals?|food)\b/i.test(content) &&
+          /\b(?:app|tool|software|track(?:er|ing)?|log(?:ging)?|estimate|calculator)\b/i.test(
+            content,
+          )
+        : business.category === "Shopify & email marketing"
+          ? /\bshopify\b/i.test(content) &&
+            /\b(?:discount|codes?|email|cart)\b/i.test(content)
+          : business.category === "Website uptime monitoring"
+            ? /\b(?:uptime|downtime)\b/i.test(content) &&
+              /\b(?:websites?|sites?|monitor|alerts?|tools?|service)\b/i.test(
+                content,
+              )
+            : terms.length >= 2;
+    const incompatiblePhoto =
+      business.featureTerms.some((term) =>
+        ["photo", "picture", "camera"].includes(term),
+      ) &&
+      /\b(?:without (?:a )?(?:photo|camera)|no photos|manual[- ]only|only manual|not (?:a )?photo[- ]based)\b/i.test(
+        content,
+      );
+    const incompatibleSlack =
+      business.featureTerms.includes("slack") &&
+      /\b(?:not slack|no slack|teams only|email only)\b/i.test(content);
+    const incompatibleWebsite =
+      business.category === "Website uptime monitoring" &&
+      /\bnot (?:a )?website\b/i.test(content);
+    if (
+      !domainFit ||
+      incompatiblePhoto ||
+      incompatibleSlack ||
+      incompatibleWebsite
+    )
       continue;
     if (
       !business.featureTerms.length &&
@@ -272,7 +369,7 @@ export function rank(
     )
       continue;
     const fit = business.featureTerms.length
-      ? 0.7 + Math.min(0.3, features.length * 0.1)
+      ? 0.65 + Math.min(0.35, features.length * 0.1)
       : Math.min(1, terms.length / 2);
     const ageDays = item.publishedAt
       ? Math.max(0, (now - Date.parse(item.publishedAt)) / 86400_000)
@@ -282,13 +379,19 @@ export function rank(
     results.push({
       ...item,
       evidence: evidence.trim().slice(0, 700),
-      reason: `This request mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
+      reason: `This discussion mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
       need: /alternative|instead of|switch from/i.test(content)
         ? "Alternative request"
-        : "Solution request",
+        : /struggling with|tired of|takes too long|hard to|difficult to|trouble with|hate (?:tracking|logging)|forget to/i.test(
+              evidence,
+            ) &&
+            !/looking for|recommend|is there|what (?:app|tool)/i.test(evidence)
+          ? "Problem context"
+          : "Solution request",
       score: Math.round(
         100 * (0.4 * fit + 0.35 + 0.15 * freshness + 0.1 * specificity),
       ),
+      reviewMethod: "Keyword rules",
       saved: false,
       irrelevant: false,
     });

@@ -175,81 +175,35 @@ test("HTTP ownership, idempotency, read-only GET, origin and input bounds", asyn
   ).toBe(413);
 });
 
-test("X and both-source samples keep source labels and feedback isolated across reload", async ({
+test("launch is Reddit only and preserves real provenance on partial retrieval", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Uptime monitor" }).click();
-  await page.getByLabel("Search in", { exact: true }).selectOption("x");
-  await page.getByRole("button", { name: "Run search" }).click();
-  await expect(
-    page.getByRole("heading", { name: "3 examples worth a closer look." }),
-  ).toBeVisible({ timeout: 15000 });
-  await expect(
-    page.locator("article").getByText("X sample", { exact: true }),
-  ).toHaveCount(3);
-  await expect(page.getByRole("link", { name: "Open original" })).toHaveCount(
-    0,
-  );
-  await page.getByRole("button", { name: "Start over" }).click();
-  await page.getByLabel("Search in", { exact: true }).selectOption("both");
-  await page.getByRole("button", { name: "Run search" }).click();
-  await expect(
-    page.getByRole("heading", { name: "6 examples worth a closer look." }),
-  ).toBeVisible({ timeout: 15000 });
-  await expect(
-    page.locator("article").getByText("X sample", { exact: true }),
-  ).toHaveCount(3);
-  await expect(
-    page.locator("article").getByText("Reddit sample", { exact: true }),
-  ).toHaveCount(3);
-  await expect(
-    page.getByRole("list", { name: "Source progress" }).locator("li"),
-  ).toHaveCount(2);
-  const xCard = page
-    .locator("article")
-    .filter({ has: page.getByText("X sample", { exact: true }) })
-    .first();
-  await xCard.getByRole("button", { name: "Save", exact: true }).click();
-  await page.reload();
-  await expect(page.getByLabel("Search in", { exact: true })).toHaveValue(
-    "both",
-  );
-  await expect(
-    page.locator("article").getByRole("button", { name: "Saved", exact: true }),
-  ).toHaveCount(1);
-});
-
-test("both-source partial failure presents retrieved source provenance without claiming an empty failed source", async ({
-  page,
-}) => {
-  // Browser presentation check uses a simulated API response; no paid source calls.
+  // Presentation fixture only; independently verified live results are recorded separately.
   const scan = {
     id: "simulated-browser-scan",
     description: "Our website uptime monitor sends alerts.",
     mode: "live",
-    sources: ["reddit", "x"],
+    sources: ["reddit"],
     stage: "partial",
     sourceRuns: [
       {
         source: "reddit",
-        status: "failed",
-        retrieved: 0,
-        normalized: 0,
+        status: "partial",
+        retrieved: 1,
+        normalized: 1,
         error:
-          "Reddit source could not finish; this is not a confirmed empty search.",
+          "The source reached its time limit; this does not confirm an empty search.",
       },
-      { source: "x", status: "complete", retrieved: 1, normalized: 1 },
     ],
     results: [
       {
-        id: "x:123",
-        source: "x",
-        title: "A request on X",
+        id: "reddit:abc",
+        source: "reddit",
+        title: "A request on Reddit",
         text: "Looking for an uptime monitor with website alerts.",
-        url: "https://x.com/example/status/123",
-        publishedAt: "2026-10-11T15:00:00.000Z",
-        community: null,
+        url: "https://www.reddit.com/r/test/comments/abc/request/",
+        publishedAt: "2026-09-28T15:00:00.000Z",
+        community: "r/test",
         synthetic: false,
         reason: "Requests uptime monitoring with alerts.",
         evidence: "Looking for",
@@ -257,6 +211,7 @@ test("both-source partial failure presents retrieved source provenance without c
         score: 80,
         saved: false,
         irrelevant: false,
+        reviewMethod: "Keyword rules",
       },
     ],
     retrieved: 1,
@@ -271,8 +226,11 @@ test("both-source partial failure presents retrieved source provenance without c
     }),
   );
   await page.goto("/");
+  await expect(page.getByLabel("Search in", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("X · experimental", { exact: true })).toHaveCount(
+    0,
+  );
   await page.getByRole("button", { name: "Uptime monitor" }).click();
-  await page.getByLabel("Search in", { exact: true }).selectOption("both");
   await page.getByLabel("Live search", { exact: true }).check();
   await page.getByRole("button", { name: "Run search" }).click();
   await expect(
@@ -280,12 +238,10 @@ test("both-source partial failure presents retrieved source provenance without c
   ).toBeVisible();
   await expect(
     page.getByRole("list", { name: "Source progress" }),
-  ).toContainText("not a confirmed empty search");
-  await expect(
-    page.locator("article").getByText("X", { exact: true }),
-  ).toBeVisible();
+  ).toContainText("does not confirm an empty search");
   await expect(
     page.getByRole("link", { name: "Open original" }),
   ).toHaveAttribute("href", scan.results[0].url);
   await expect(page.locator("article")).toContainText("2026");
+  await expect(page.locator("article")).toContainText("Keyword rules");
 });

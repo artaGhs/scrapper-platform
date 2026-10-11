@@ -24,7 +24,7 @@ A desktop or mobile browser, a short product description, and original public di
 
 ## Capabilities and Constraints
 
-One-page Next.js/React prototype with strict TypeScript for app, API, provider/storage and future AWS integration logic, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Reddit and X connectors are configurable, with Reddit/X/both source selection and actual per-source status; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. Instagram and TikTok are deferred until after the Reddit/X MVP; YouTube is outside scope. No checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
+One-page Next.js/React prototype with strict TypeScript for app, API, provider/storage and future AWS integration logic, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Public launch uses Reddit only, with actual source progress; X is deferred and excluded from public scan creation; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. X, Instagram and TikTok are deferred from this Reddit-only release; YouTube is outside scope. No checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
 
 ## Brand Commitments
 
@@ -45,3 +45,7 @@ README.md, docs/research.md, docs/mvp-plan.md, docs/validation.md. Three explici
 ## Accessibility & Inclusion
 
 Keyboard operation, readable contrast, responsive layout and reduced-motion support are required by this implementation brief.
+
+### Final launch scope (October 11, 2026)
+
+User narrowed launch to Reddit only. Public UI and scan creation expose Reddit only; X code is retained privately as deferred work. Category/problem searches target verified communities where known, use the past year with honest age labels, and do not require every optional feature in the source request. Gemini now performs a bounded exact-evidence context assessment of up to five candidates; deterministic queries preserve recall. The hosted useful-result release gate is recorded separately from historical transport-only tests in docs/validation.md. No payments, customer acquisition or outreach are implemented.

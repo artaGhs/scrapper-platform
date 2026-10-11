@@ -1,10 +1,10 @@
 # Scrapper platform
 
-Describe a business, run a bounded search, and review conversations where someone explicitly asks for a solution you offer. Each match shows the original words and an explanation; you decide whether to participate manually and transparently.
+Describe a business, run a bounded search, and review conversations where someone asks for a relevant solution or discusses the problem you solve. Each match shows the original words and an explanation; you decide whether to participate manually and transparently.
 
 **[Open the deployed MVP](https://scrapper-platform-khaki.vercel.app)**
 
-**Implemented MVP, October 11, 2026.** A Next.js app with sample demonstrations, gated Reddit and X connectors, compact source selection, per-source progress, optional Gemini Reddit search-phrase drafting, truthful progress, up to ten ranked results, and persistent Save / Not relevant feedback. Vercel uses free Neon Postgres; local development can use SQLite. Commercial source permissions and useful live coverage remain unresolved.
+**Implemented MVP, October 11, 2026.** Reddit-only public launch: one description, a bounded live scan, original text/URLs/dates, source-supported fit, request/problem labels, and persistent Save / Not relevant feedback. Sample examples remain clearly fictional. Vercel uses free Neon Postgres; local development can use SQLite. Useful live coverage is subject to the validation evidence below.
 
 ## Codebase requirement
 
@@ -24,15 +24,15 @@ Open http://127.0.0.1:3000. Sample mode works without provider keys. Never overw
 
 ## Live pilot
 
-Set server-only `APIFY_TOKEN`, `LIVE_SCAN_BUDGET_USD` between the selected sources' minimum ($0.04 Reddit, $0.02 X, $0.06 both) and $1, and `LIVE_HOURLY_BUDGET_USD` (at most $10). The shipped example disables live search. Set `LIVE_ACCESS_CODE` for a deployed pilot and enter it in the form. The code is never kept in browser storage. For this deployment the operator code is saved in ignored `.data/pilot-access-code`; configured source caps are $0.08 per run and $0.08 in hourly reservations. Optional `GEMINI_API_KEY` enables one grounded Reddit search-phrase draft per live scan containing Reddit; X builds one deterministic query combining product terms with request phrases. Model failure falls back to the stated-keyword strategy. Matching and ranking use a disclosed conservative request-and-fit rubric, not model-generated buying intent.
+Set server-only `APIFY_TOKEN`, `LIVE_SCAN_BUDGET_USD` ($0.04–$1), `LIVE_HOURLY_BUDGET_USD` (at most $10), and `LIVE_ACCESS_CODE`. The example disables live search. The operator code is stored only in ignored `.data/pilot-access-code`; the form never keeps it in browser storage. This controlled verification reserves at most $0.08 per scan and $0.24 across three scans, below the additional $0.25 authorization.
 
-Reddit jobs request 10–50 records (the actor rejects lower limits) and up to three phrases. X jobs use one query and at most ten posts. Selecting both requests at most 40 Reddit records plus ten X posts, with $0.02 of the total reservation assigned to X and the remainder to Reddit. Each job has a 180-second provider timeout, and an explicit source charge cap; both sources require at least a $0.06 total cap. Failed or uncertain job starts are not automatically repeated. Atomic reservations enforce the server's hourly source budget across sessions; model fees are separate and bounded by one request with a 512-token output cap. A $0 budget disables provider and model calls. Credentials stay server-side; public scan responses exclude source job IDs and owner secrets.
+Reddit uses up to three category/problem searches, explicit Boolean syntax, and a small curated community set where available: calorie tracking uses r/caloriecount/r/loseit, Shopify uses r/shopify, uptime uses r/selfhosted. These community pages and Reddit's search syntax were checked; membership does not establish fit. Other categories use broader Reddit and disclose that scope. The past-year search shows actual dates and age rather than calling old posts fresh leads. No known example IDs are preloaded.
+
+The actor requests at most 50 items, with a 180-second timeout and an explicit charge cap. Atomic reservations enforce the global hourly budget across sessions. Failed or uncertain starts are not repeated automatically. Keyword checks reject promotions, unrelated domains and explicit incompatibilities; optional offered features need not appear in an ask. Optional Gemini assesses up to five candidates in one 512-output-token request, accepts only exact source quotations, and removes uncertain/rejected cases. Remaining candidates use keyword rules. A model failure is disclosed and retains the keyword checks. Scores are fit ordering, never purchase probability. The legacy draft helper remains for historical tests; production queries use deterministic category/problem syntax.
 
 Three explicitly authorized Reddit source attempts reported **$0.092 total charges**. The first timed out with one community record; a five-item attempt was rejected without charge. The corrected ten-item attempt succeeded, returning **seven real posts with text, original URLs and publication dates**, all normalized correctly. None qualified for the uptime-monitor business: the returned posts used “monitor” in unrelated contexts, so useful search precision remains unproven. The separate model generation passed with **132 tokens**; estimated paid-tier cost was $0.0001188, not an observed billing charge. See [validation evidence](docs/validation.md). Sample cards are unmistakably fictional and have no invented original links or publication dates.
 
-The separately authorized X check succeeded with **ten real posts, all normalized, zero qualified matches**, and a final **$0.020 reported charge**. Both sources combined reported $0.112 in validation charges. Free demo results did not demonstrate focused discovery. See [X validation and account limits](docs/x-validation.md).
-
-The current X actor's free entitlement is **10 items per run and 5 runs per month**. A durable global monthly reservation counter (`X_MONTHLY_RUN_LIMIT=5`) survives scan expiration and blocks excess pilot requests; reservations are conservative and are not refunded for failures. Actor history was synced after the validation. One global active X job is allowed. After a separately verified account upgrade, an operator may change the bounded monthly allowance; item/time/charge caps and pilot access remain enforced. No plan was purchased. External actor use can consume its quota too, so source errors remain possible.
+X is deferred from the public launch and rejected by the public scan-creation API. Its connector and historical tests remain in the repository. Its earlier free-demo check returned ten real posts, zero qualified matches, and cost $0.020; useful X discovery was not proven. Historical Reddit/X source charges before final hosted verification total $0.112. See [historical X validation](docs/x-validation.md).
 
 ## Durable Vercel deployment
 
@@ -40,7 +40,6 @@ Connect the project to a free Neon database, provide `DATABASE_URL`, and run:
 
 ```sh
 npm run db:setup
-npx tsx scripts/sync-x-allowance.ts
 npm run test:database
 npm run build
 ```
@@ -64,4 +63,4 @@ Browser tests default to http://127.0.0.1:3173; use `TEST_BASE_URL` to check ano
 
 [Research](docs/research.md) records competitors, source limitations, customer hypotheses and proposed economics. [MVP plan](docs/mvp-plan.md) is the original implementation specification. Neither validates demand, source rights, or a subscription price.
 
-Instagram and TikTok are deferred until after this Reddit/X MVP. YouTube is outside scope. Automatic outreach, scheduled monitoring, customer validation and checkout remain deferred. No Stripe or merchant account was created. Amazon Pay and AWS Marketplace SaaS billing are different options; the exact service required for hackathon AWS-track eligibility has not been confirmed. Vercel hosting is independent of that unresolved payment requirement.
+X, Instagram and TikTok are deferred from this Reddit-only release. YouTube is outside scope. Automatic outreach, scheduled monitoring, customer validation and checkout remain deferred. No Stripe or merchant account was created. Amazon Pay and AWS Marketplace SaaS billing are different options; the exact service required for hackathon AWS-track eligibility has not been confirmed. Vercel hosting is independent of that unresolved payment requirement.

@@ -12,6 +12,7 @@ export interface SourceRun {
   actualUsd?: number;
   error?: string;
   queries?: string[];
+  queryPlans?: Business["queryPlans"];
 }
 export function selectedSources(sources?: Source[]): Source[] {
   return sources?.length
@@ -44,6 +45,13 @@ export interface Business {
   featureTerms: string[];
   queries: string[];
   queryMethod?: "Gemini draft";
+  categoryPhrase?: string;
+  communities?: string[];
+  queryPlans?: {
+    phrase: string;
+    signal: "recommendation" | "problem" | "alternative";
+    rationale: string;
+  }[];
 }
 export interface SourceItem {
   source?: Source;
@@ -58,10 +66,11 @@ export interface SourceItem {
 export interface Opportunity extends SourceItem {
   reason: string;
   evidence: string;
-  need: "Solution request" | "Alternative request";
+  need: "Solution request" | "Alternative request" | "Problem context";
   score: number;
   saved: boolean;
   irrelevant: boolean;
+  reviewMethod?: "Gemini assessment" | "Keyword rules";
 }
 export interface Scan {
   id: string;
@@ -76,6 +85,8 @@ export interface Scan {
   sourceRuns?: SourceRun[];
   sourceCursor?: number;
   xMonthlyRunLimit?: number;
+  reviewComplete?: boolean;
+  modelReview?: "Gemini + keyword rules" | "Keyword rules";
   business?: Business;
   runId?: string;
   datasetId?: string;
@@ -95,6 +106,7 @@ export type PublicScan = Pick<
   | "mode"
   | "stage"
   | "business"
+  | "modelReview"
   | "sources"
   | "results"
   | "retrieved"
@@ -114,15 +126,25 @@ export function publicScan(
     mode: scan.mode,
     stage: scan.stage,
     business: scan.business,
+    modelReview: scan.modelReview,
     sources: selectedSources(scan.sources),
     sourceRuns: (scan.sourceRuns || []).map(
-      ({ source, status, retrieved, normalized, error, queries }) => ({
+      ({
         source,
         status,
         retrieved,
         normalized,
         error,
         queries,
+        queryPlans,
+      }) => ({
+        source,
+        status,
+        retrieved,
+        normalized,
+        error,
+        queries,
+        queryPlans,
       }),
     ),
     results: scan.results,

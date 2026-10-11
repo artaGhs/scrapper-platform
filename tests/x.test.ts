@@ -94,7 +94,7 @@ test("X adapter sends one constrained need query, ten-result limit and explicit 
   assert.equal(request!.input.maxItems, 10);
   assert.equal(request!.input.sort, "Latest");
   assert.deepEqual(request!.input.searchTerms, [xSearchQuery(business)]);
-  assert.match(xSearchQuery(business), /^\(uptime\).*looking for/);
+  assert.match(xSearchQuery(business), /^"uptime monitor" "looking for"/);
   assert.ok(!("startUrls" in request!.input));
   let calls = 0;
   const denied: typeof fetch = async () => {
@@ -272,7 +272,7 @@ test("X-only scans use structured product terms without paying for unused Gemini
     );
     assert.equal(drafts, 0);
     assert.equal(scan.business!.queryMethod, undefined);
-    assert.match(scan.sourceRuns![0].queries![0], /^\(uptime\)/);
+    assert.match(scan.sourceRuns![0].queries![0], /^"uptime monitor"/);
   } finally {
     db.close();
     if (prior === undefined) delete process.env.GEMINI_API_KEY;

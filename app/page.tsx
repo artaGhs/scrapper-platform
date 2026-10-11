@@ -102,11 +102,14 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 function when(value: string | null) {
   if (!value) return "Time unknown";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
+  return (
+    new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(value)) +
+    ` · ${Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 86400_000))} days ago`
+  );
 }
 function Result({
   item,
@@ -142,7 +145,12 @@ function Result({
         <h3>{item.title || item.evidence}</h3>
         <blockquote>{item.text || item.title}</blockquote>
         <div className="fit">
-          <span className="fit-label">{item.need}</span>
+          <span className="fit-label">
+            {item.need}
+            {!item.synthetic && item.reviewMethod
+              ? ` · ${item.reviewMethod}`
+              : ""}
+          </span>
           <p>{item.reason}</p>
         </div>
         <div className="result-actions">
@@ -198,7 +206,6 @@ export default function Home() {
   const [description, setDescription] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const progressSection = useRef<HTMLElement>(null);
-  const [selection, setSelection] = useState<"reddit" | "x" | "both">("reddit");
   const [mode, setMode] = useState<Mode>("sample");
   const [scan, setScan] = useState<PublicScan | null>(null);
   const [error, setError] = useState("");
@@ -244,11 +251,6 @@ export default function Home() {
               remember(previous);
               setDescription(previous.description);
               setMode(previous.mode);
-              setSelection(
-                previous.sources?.length === 2
-                  ? "both"
-                  : previous.sources?.[0] || "reddit",
-              );
             }
           } catch {
             try {
@@ -323,7 +325,7 @@ export default function Home() {
         body: JSON.stringify({
           description,
           mode,
-          sources: selection === "both" ? ["reddit", "x"] : [selection],
+          sources: ["reddit"],
           key: runKey.current,
         }),
       });
@@ -522,22 +524,6 @@ export default function Home() {
                   <span>Live search</span>
                 </label>
               </fieldset>
-              <div className="source-selection">
-                <label htmlFor="source">Search in</label>
-                <select
-                  id="source"
-                  value={selection}
-                  disabled={busy}
-                  onChange={(event) => {
-                    setSelection(event.target.value as "reddit" | "x" | "both");
-                    runKey.current = null;
-                  }}
-                >
-                  <option value="reddit">Reddit</option>
-                  <option value="x">X</option>
-                  <option value="both">Reddit + X</option>
-                </select>
-              </div>
               {mode === "live" && (
                 <div className="pilot-access">
                   <label htmlFor="access-code" className="field-label">
@@ -558,11 +544,7 @@ export default function Home() {
                 <p>
                   {mode === "sample"
                     ? "Fictional examples. No live search or original post links."
-                    : selection === "x"
-                      ? "X pilot: up to 10 posts. Access code required."
-                      : selection === "both"
-                        ? "Reddit + X: up to 50 records total. Access code required."
-                        : "Reddit: up to 50 records. Access code required."}
+                    : "Reddit: up to 50 records. Access code required."}
                 </p>
                 <button
                   className="run-button"
@@ -662,6 +644,29 @@ export default function Home() {
                 </span>
               </div>
             )}
+            {scan.business?.communities?.length ? (
+              <p className="sample-disclosure">
+                {scan.mode === "sample"
+                  ? "Example community scope"
+                  : finished
+                    ? "Searched these communities"
+                    : "Searching these communities"}
+                :{" "}
+                {scan.business.communities
+                  .map((name) => `r/${name}`)
+                  .join(", ")}
+                . Community membership alone does not establish fit.
+              </p>
+            ) : scan.business ? (
+              <p className="sample-disclosure">
+                {scan.mode === "sample"
+                  ? "Example broader Reddit scope"
+                  : finished
+                    ? "Searched broader Reddit"
+                    : "Searching broader Reddit"}
+                : no curated community is available for this category.
+              </p>
+            ) : null}
             {scan.business && (
               <details className="strategy">
                 <summary>
@@ -686,13 +691,21 @@ export default function Home() {
                       <span key={query}>{query}</span>
                     ))}
                 </div>
+                {scan.sourceRuns?.flatMap((run) =>
+                  (run.queryPlans || []).map((plan) => (
+                    <p key={`${run.source}:${plan.phrase}`}>
+                      <strong>{plan.phrase}</strong> — {plan.rationale}
+                    </p>
+                  )),
+                )}
                 <p>
-                  {scan.business.queryMethod === "Gemini draft"
-                    ? "Gemini drafted the Reddit search phrases. "
-                    : "Search phrases use your stated keywords. "}
-                  X combines product keywords with explicit-request phrases.
-                  Conservative keyword matching checks explicit requests and
-                  shared details. It can miss nuance; review every result.
+                  Reddit searches the past year. Category and problem phrases
+                  find candidates, then context and fit checks qualify them.
+                  {scan.modelReview === "Gemini + keyword rules"
+                    ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
+                    : " Keyword rules check the returned context."}{" "}
+                  Dates show the age of each discussion. A match does not prove
+                  purchase intent.
                 </p>
               </details>
             )}
@@ -722,7 +735,7 @@ export default function Home() {
                 {scan.mode === "sample" && (
                   <p className="sample-disclosure">
                     These are fictional discussions that demonstrate matching.
-                    They were not found on Reddit or X, have no original URLs or
+                    They were not found on Reddit, have no original URLs or
                     dates, and are not leads.
                   </p>
                 )}
@@ -781,7 +794,7 @@ export default function Home() {
                         ? "This small fixture set covers food-photo tracking, Shopify discounts, and website uptime. An unrelated business can correctly return no examples."
                         : scan.stage === "partial"
                           ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
-                          : "No returned record passed the request-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
+                          : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
                     </p>
                     <button onClick={reset}>
                       Refine the description <Arrow />

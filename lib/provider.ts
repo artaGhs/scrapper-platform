@@ -139,7 +139,7 @@ export class RedditProvider extends ApifyProvider {
           maxPostCount: Math.ceil(limit / Math.max(1, business.queries.length)),
           maxComments: 0,
           sort: "new",
-          time: "month",
+          time: "year",
         }),
       }),
     );

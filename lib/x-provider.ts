@@ -13,15 +13,10 @@ export function xSearchQuery(business: Business, now = Date.now()): string {
   ].slice(0, 4);
   if (!subject.length)
     throw new AppError("Describe a specific product before searching X.");
-  const focused = subject.includes("uptime")
-    ? ["uptime"]
-    : subject.includes("shopify")
-      ? ["shopify"]
-      : subject.includes("calorie")
-        ? ["calorie"]
-        : subject.slice(0, 2);
+  const phrase = business.categoryPhrase || subject.slice(0, 3).join(" ");
+  const safePhrase = phrase.replace(/[^a-z0-9 -]/gi, "").trim();
   const since = new Date(now - 30 * 86400_000).toISOString().slice(0, 10);
-  return `(${focused.join(" OR ")}) ("looking for" OR "anyone recommend" OR "is there" OR "alternative") lang:en -filter:retweets since:${since}`;
+  return `"${safePhrase}" "looking for" lang:en -filter:retweets since:${since}`;
 }
 export class XProvider extends ApifyProvider {
   constructor(

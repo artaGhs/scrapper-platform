@@ -92,7 +92,7 @@ test("normalization rejects missing sources, stale items and duplicates, preserv
         id: "4",
         body: "Old question",
         url: "https://www.reddit.com/r/test/comments/old/question/",
-        createdAt: new Date(now - 40 * 86400_000).toISOString(),
+        createdAt: new Date(now - 400 * 86400_000).toISOString(),
       },
       { id: "5", body: "No original URL" },
       {

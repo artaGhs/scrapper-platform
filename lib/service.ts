@@ -1,6 +1,7 @@
 import { AppError, liveConfig, SCAN_TIMEOUT_MS } from "./config";
 import { interpret, isDiscussionRecord, normalize, rank } from "./discovery";
-import { draftQueries } from "./model";
+import { assessCandidates } from "./model-review";
+import type { draftQueries } from "./model";
 import { RedditProvider } from "./provider";
 import { XProvider, xSearchQuery } from "./x-provider";
 import { sampleItems } from "./samples";
@@ -56,6 +57,7 @@ export async function advance(
   repository?: ScanRepository,
   injectedProvider?: Injected,
   injectedDraft?: typeof draftQueries,
+  injectedAssessment?: typeof assessCandidates,
 ): Promise<Scan> {
   const db = repository || (await store());
   const current = await db.get(id, owner);
@@ -140,14 +142,16 @@ export async function advance(
       switch (scan.stage) {
         case "interpreting": {
           scan.business = interpret(scan.description);
+          // Deterministic source syntax keeps category recall; Gemini assesses returned context.
+          // The draft injection is retained only for legacy validation compatibility.
           if (
+            injectedDraft &&
             scan.mode === "live" &&
             scan.sources.includes("reddit") &&
-            process.env.GEMINI_API_KEY &&
-            (!injectedProvider || injectedDraft)
+            process.env.GEMINI_API_KEY
           ) {
             try {
-              scan.business = await (injectedDraft || draftQueries)(
+              scan.business = await injectedDraft(
                 scan.business,
                 process.env.GEMINI_API_KEY,
               );
@@ -156,11 +160,14 @@ export async function advance(
                 "The model could not draft grounded phrases. This search uses the keyword strategy instead.";
             }
           }
-          for (const run of scan.sourceRuns)
+          for (const run of scan.sourceRuns) {
+            run.queryPlans =
+              run.source === "reddit" ? scan.business.queryPlans : undefined;
             run.queries =
               run.source === "x"
                 ? [xSearchQuery(scan.business)]
                 : scan.business.queries;
+          }
           scan.stage = "preparing";
           break;
         }
@@ -272,11 +279,38 @@ export async function advance(
           if (runs.every(stopped)) finishRetrieval(scan);
           break;
         }
-        case "reviewing":
+        case "reviewing": {
+          scan.results = rank(scan.items || [], scan.business!);
+          scan.modelReview = "Keyword rules";
+          if (
+            scan.mode === "live" &&
+            process.env.GEMINI_API_KEY &&
+            scan.results.length &&
+            (!injectedProvider || injectedAssessment)
+          ) {
+            try {
+              scan.results = await (injectedAssessment || assessCandidates)(
+                scan.business!,
+                scan.results,
+                process.env.GEMINI_API_KEY,
+              );
+              scan.modelReview = "Gemini + keyword rules";
+            } catch {
+              scan.notice = [
+                scan.notice,
+                "The model could not review these requests. Keyword checks were retained.",
+              ]
+                .filter(Boolean)
+                .join(" ");
+            }
+          }
+          scan.reviewComplete = true;
           scan.stage = "ranking";
           break;
+        }
         case "ranking":
-          scan.results = rank(scan.items || [], scan.business!);
+          if (!scan.reviewComplete)
+            scan.results = rank(scan.items || [], scan.business!);
           scan.items = undefined;
           scan.stage = scan.partial
             ? "partial"

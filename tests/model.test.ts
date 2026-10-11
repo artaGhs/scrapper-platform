@@ -19,7 +19,9 @@ test("model query drafting is bounded, server authenticated and retains the obse
           content: {
             parts: [
               {
-                text: JSON.stringify({ queries: ["calories food photos app"] }),
+                text: JSON.stringify({
+                  queries: ["calorie tracking recommendation"],
+                }),
               },
             ],
           },
