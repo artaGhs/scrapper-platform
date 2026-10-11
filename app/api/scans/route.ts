@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AppError, liveConfig } from "@/lib/config";
 import {
   attachSession,
+  authorizeLive,
   body,
   failure,
   json,
@@ -27,8 +28,11 @@ export async function POST(request: NextRequest) {
         "Describe your business in 20–1,500 characters and choose a search mode.",
       );
     const owner = session(request) || newSession();
+    if (input.data.mode === "live") authorizeLive(request);
     const config = input.data.mode === "live" ? liveConfig() : undefined;
-    const scan = store().create(
+    const scan = await (
+      await store()
+    ).create(
       owner,
       input.data.key,
       input.data.description,

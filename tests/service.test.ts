@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { ScanStore } from "../lib/store";
+import { ScanStore } from "../lib/sqlite-store";
 import { advance } from "../lib/service";
 import { terminalStages, publicScan } from "../lib/types";
 import { RedditProvider } from "../lib/provider";
@@ -167,11 +167,12 @@ test("adapter sends bounded documented inputs and withholds credentials from use
     interpret(description),
   );
   assert.ok(requests[0].url.includes("maxTotalChargeUsd=0.5"));
-  assert.ok(requests[0].url.includes("maxItems=100"));
+  assert.ok(requests[0].url.includes("maxItems=50"));
   assert.ok(!requests[0].url.includes("test-token"));
   const input = JSON.parse(requests[0].init?.body as string);
-  assert.equal(input.maxItems, 100);
+  assert.equal(input.maxItems, 50);
   assert.equal(input.searchComments, false);
+  assert.equal(input.skipCommunity, true);
   const denied: typeof fetch = async () =>
     Response.json({ error: "test-token" }, { status: 401 });
   await assert.rejects(

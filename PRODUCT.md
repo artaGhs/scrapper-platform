@@ -24,7 +24,7 @@ A desktop or mobile browser, a short product description, and original public di
 
 ## Capabilities and Constraints
 
-One-page Next.js/React prototype, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Live Reddit connector is configurable; absent credentials default to clearly labeled synthetic examples. No global Instagram, billing, deployment, paid validation calls or automatic outreach.
+One-page Next.js/React prototype, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Live Reddit connector is configurable; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. No global Instagram, checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
 
 ## Brand Commitments
 
@@ -32,7 +32,7 @@ Project name Scrapper platform. Plain factual language, very simple landing dire
 
 ## Evidence on Hand
 
-README.md, docs/research.md, docs/mvp-plan.md. Public-source research only. No testimonials, customer outcomes, authenticated source tests or commercial permission. Synthetic demonstration content must be unmistakable and have no invented original links.
+README.md, docs/research.md, docs/mvp-plan.md. A single authenticated Apify validation cost $0.024 and timed out, returning one community record and no qualified conversations. One Gemini query-drafting request passed using 96 input and 36 output tokens. No testimonials, customer outcomes or commercial permission. Synthetic demonstration content must be unmistakable and have no invented original links.
 
 ## Product Principles
 

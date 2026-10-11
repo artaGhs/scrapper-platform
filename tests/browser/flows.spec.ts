@@ -19,6 +19,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
   await expect(page.getByRole("status")).toContainText(
     /Reading|Preparing|Loading|Reviewing|Checking/,
   );
+  await expect(page.locator(".progress-rail")).toBeInViewport();
   await expect(
     page.getByRole("heading", { name: "3 examples worth a closer look." }),
   ).toBeVisible({ timeout: 15000 });
@@ -81,7 +82,9 @@ test("empty fixtures and disabled live configuration remain truthful", async ({
   await page.getByRole("button", { name: "Start over" }).click();
   await page.getByLabel("Live Reddit", { exact: true }).check();
   await page.getByRole("button", { name: "Run search" }).click();
-  await expect(page.locator(".error-message[role=alert]")).toContainText(/local|budget|connected/);
+  await expect(page.locator(".error-message[role=alert]")).toContainText(
+    /budget|connected|pilot access/,
+  );
   await expect(page.locator("article")).toHaveCount(0);
 });
 
@@ -91,6 +94,13 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await expect(page.getByRole("button", { name: "Run search" })).toBeInViewport(
+    { ratio: 1 },
+  );
+  await page.screenshot({
+    path: "docs/screenshots/mobile-start.png",
+    fullPage: true,
+  });
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("link", { name: "Skip to business description" }),
@@ -140,7 +150,7 @@ test("HTTP ownership, idempotency, read-only GET, origin and input bounds", asyn
   const snapshot = await request.get(`/api/scans/${scan.id}`);
   expect((await snapshot.json()).stage).toBe("interpreting");
   const other = await playwright.request.newContext({
-    baseURL: "http://127.0.0.1:3173",
+    baseURL: process.env.TEST_BASE_URL || "http://127.0.0.1:3173",
   });
   await other.get("/api/session");
   expect((await other.get(`/api/scans/${scan.id}`)).status()).toBe(404);

@@ -1,8 +1,9 @@
 import { AppError, liveConfig, SCAN_TIMEOUT_MS } from "./config";
 import { interpret, normalize, rank } from "./discovery";
+import { draftQueries } from "./model";
 import { RedditProvider } from "./provider";
 import { sampleItems } from "./samples";
-import { ScanStore, store } from "./store";
+import { type ScanRepository, store } from "./store";
 import { terminalStages, type Scan } from "./types";
 
 interface Provider {
@@ -14,24 +15,25 @@ interface Provider {
 export async function advance(
   id: string,
   owner: string,
-  db: ScanStore = store(),
+  repository?: ScanRepository,
   injectedProvider?: Provider,
 ): Promise<Scan> {
-  const current = db.get(id, owner);
+  const db = repository || (await store());
+  const current = await db.get(id, owner);
   if (!current)
     throw new AppError("Search not found or expired. Start a new search.", 404);
   if (terminalStages.includes(current.stage)) return current;
-  if (db.expiredLease(id, owner)) {
+  if (await db.expiredLease(id, owner)) {
     // A crash during creation is ambiguous: fail closed rather than duplicate a paid run.
     current.stage = "failed";
     current.error =
       "This search was interrupted. An uncertain source job will not be restarted automatically.";
-    db.save(current);
+    await db.save(current);
     return current;
   }
-  if (!db.claim(id, owner)) return current;
+  if (!(await db.claim(id, owner))) return current;
   // Read after claiming, so a concurrent request cannot act on an earlier stage.
-  const scan = db.get(id, owner)!;
+  const scan = (await db.get(id, owner))!;
   try {
     const provider =
       scan.mode === "live"
@@ -57,6 +59,21 @@ export async function advance(
     switch (scan.stage) {
       case "interpreting":
         scan.business = interpret(scan.description);
+        if (
+          scan.mode === "live" &&
+          process.env.GEMINI_API_KEY &&
+          !injectedProvider
+        ) {
+          try {
+            scan.business = await draftQueries(
+              scan.business,
+              process.env.GEMINI_API_KEY,
+            );
+          } catch {
+            scan.notice =
+              "The model could not draft grounded phrases. This search uses the keyword strategy instead.";
+          }
+        }
         scan.stage = "preparing";
         break;
       case "preparing": {
@@ -122,6 +139,6 @@ export async function advance(
         ? error.message
         : "This search could not finish. Your description is preserved; try again.";
   }
-  db.save(scan);
+  await db.save(scan);
   return scan;
 }

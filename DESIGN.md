@@ -24,6 +24,9 @@ typography:
 rounded:
   control: "8px"
   panel: "16px"
+  compact: "6px"
+  pill: "100px"
+  dot: "50%"
 spacing:
   small: "8px"
   medium: "16px"
@@ -48,7 +51,7 @@ Green ink owns headings and actions; pale green holds sample and selected states
 
 ## Typography
 
-Arial/Helvetica is a dependable operating face available without network font requests. Large sentence-case display text, compact semibold labels, readable 16px original excerpts. No decorative monospace. Body measure stays below 72ch.
+Arial/Helvetica is a dependable operating face available without network font requests. Large sentence-case display text, compact semibold labels, readable 15px original excerpts; 11–13px metadata, 14–18px supporting text, 19–24px panel and result headings, and 25–36px results headings. No decorative monospace. Body measure stays below 72ch.
 
 ## Layout
 
@@ -60,7 +63,7 @@ Tonal layers and a single border define panels. No panel shadows. Depth is conve
 
 ## Shapes
 
-8px controls, 16px major panels, small status pills. The search path is a ruled rail with connected stage dots, not a fake completion gauge.
+8px inputs and primary controls, 6px compact actions, 16px major panels, 100px status pills and round stage dots. The search path is a ruled rail with connected stage dots, not a fake completion gauge.
 
 ## Components
 

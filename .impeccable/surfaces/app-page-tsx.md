@@ -16,3 +16,5 @@ Direction: the conversation desk, an open pale-green workspace with green ink, a
 Grounded candidates considered: community reading pane, search notebook, acquisition checklist, conversation desk (assigned fourth), annotated index, help-thread digest, structured query console. Seed 4652c18f. The desk wins on product clarity; travel-board and map challengers would add indirect task vocabulary. Staging: direct input-to-list with a truthful stage rail. No raster material is needed; semantic controls and original words own the surface. Under the hackathon scope, implementation and browser iteration take precedence over optional generated compositions.
 
 Unresolved: authenticated provider quality and commercial permission. Sample cards are fictional and carry no original URLs or publication dates.
+
+Finish review: updated authorization and live evidence in PRODUCT.md, changed the live cap to 50, gated paid access, brought actual progress into view, shortened the mobile introduction/form, and made synthetic fit explanations sample-aware. Live retrieval quality and commercial permission remain unresolved.

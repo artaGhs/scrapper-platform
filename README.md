@@ -1,38 +1,58 @@
 # Scrapper platform
 
-Research and planning for a simple web app that finds public conversations where someone explicitly asks for a solution a business offers.
+Describe a business, run a bounded search, and review conversations where someone explicitly asks for a solution you offer. Each match shows the original words and an explanation; you decide whether to participate manually and transparently.
 
-**Status: planning only, October 11, 2026.** This repository contains research and an executable MVP specification. No application, authenticated data integration, paid data run, customer interview, prospect outreach, billing system, or deployment has been completed.
+**[Open the deployed MVP](https://scrapper-platform-khaki.vercel.app)**
 
-## Product idea
+**Implemented MVP, October 11, 2026.** A Next.js app with sample demonstrations, a gated Reddit connector, optional Gemini search-phrase drafting, truthful progress, up to ten ranked results, and persistent Save / Not relevant feedback. Vercel uses free Neon Postgres; local development can use SQLite. Commercial source permissions and useful live coverage remain unresolved.
 
-Describe your business in a few sentences, press **Run**, see truthful search progress, and receive a short ranked list of linked opportunities. Each result explains what the person needs and why the business fits. The owner opens the original conversation and decides whether to participate transparently.
+## Run locally
 
-For example, a food-photo calorie app should find people asking for a way to estimate calories without manually entering every ingredient. A generic post about calories is insufficient evidence of a useful opportunity. This is a discovery aid; result rankings are not purchase probabilities or promises of revenue.
+Node 22.13 or newer is required.
 
-## Read the plan
+```sh
+npm ci
+cp .env.example .env.local
+npm run dev
+```
 
-- [Research](docs/research.md): competitors, public vendor capabilities and prices, data limitations, customer discovery, marketing, proposed pricing, and economics.
-- [MVP plan](docs/mvp-plan.md): one-page landing/chat experience, retrieval and ranking pipeline, API and data contracts, truthful animation, a four-hour build schedule, and acceptance criteria.
+Open http://127.0.0.1:3000. Sample mode works without provider keys. Never overwrite an existing private environment file. Scans belong to an opaque HttpOnly browser session and expire from access after 24 hours; expired rows are removed when another scan starts. Losing the session cookie loses access to saved scans.
 
-## Working decisions
+## Live pilot
 
-| Decision | Rationale |
-| --- | --- |
-| One input, one source, up to ten strong results | Makes the initial value easy to evaluate and keeps the hackathon scope small. |
-| Test Reddit retrieval first | Discussion context suits explicit solution requests; Apify Reddit Lite is a technical candidate, subject to access, rights, and sample-quality checks. |
-| Treat X as an alternative after feasibility checks | Public API options exist, but funding, query restrictions, permission, and relevance still need validation. |
-| Defer Instagram-wide discovery | Extracting comments from supplied reel URLs does not establish global search for relevant reels. |
-| Start with small B2B SaaS or Shopify app founders | Hypothesis: concrete needs, reachable owners, and higher customer value make early validation easier. |
-| Keep posting manual | Owners review context and community rules and disclose their affiliation. Never fabricate customer experiences. |
-| Consider $49/month after recurring monitoring works | Subscription value depends on fresh useful matches over time; the on-demand prototype should be described as a search beta or audit. |
+Set server-only `APIFY_TOKEN`, a positive `LIVE_SCAN_BUDGET_USD` (at most $1), and `LIVE_HOURLY_BUDGET_USD` (at most $10). The shipped example disables live search. Set `LIVE_ACCESS_CODE` for a deployed pilot and enter it in the form. The code is never kept in browser storage. For this deployment the operator code is saved in ignored `.data/pilot-access-code`; configured source caps are $0.08 per run and $0.08 in hourly reservations. Optional `GEMINI_API_KEY` enables one grounded search-phrase draft per live scan; model failure falls back to the stated-keyword strategy. Matching and ranking use a disclosed conservative request-and-fit rubric, not model-generated buying intent.
 
-These are hypotheses and proposed decisions, not validated demand or confirmed provider agreements. Competitors already offer AI filtering and reply assistance, so the test is useful results and simple onboarding, not generic chat novelty.
+Source jobs request at most 50 records, three phrases, a 180-second provider timeout, and an explicit source charge cap. Failed or uncertain job starts are not automatically repeated. Atomic reservations enforce the server's hourly source budget across sessions; model fees are separate and bounded by one request with a 512-token output cap. A $0 budget disables provider and model calls. Credentials stay server-side; public scan responses exclude source job IDs and owner secrets.
 
-## Evidence and next gate
+The one authorized source validation cost **$0.024**, timed out, and returned one community record and **zero qualified conversations**. The model validation passed with **132 tokens**; estimated paid-tier cost was $0.0001188, not an observed billing charge. See [validation evidence](docs/validation.md). Sample cards are unmistakably fictional and have no invented original links or publication dates.
 
-Public vendor pages and documentation were reviewed on October 11, 2026. Prices can change and advertised coverage has not been independently tested. Relevant sources are linked next to findings in the research document. Commercial collection, processing, customer display, retention, and deletion rights remain unresolved; third-party API availability alone does not establish permission.
+## Durable Vercel deployment
 
-The next implementation gate is a small source-feasibility sample, within explicitly authorized access and budget, followed by three business demonstrations and customer feedback. If live access is unavailable, use a clearly labeled sample dataset for an interface demonstration. This repository does not include that sample or claim live discovery.
+Connect the project to a free Neon database, provide `DATABASE_URL`, and run:
 
-Current authorization covers research, planning, GitHub setup, commits, and pushes. App implementation, provider purchases or paid calls, outreach, and deployment require a subsequent instruction.
+```sh
+npm run db:setup
+npm run test:database
+npm run build
+```
+
+`db/schema.sql` creates an isolated `scrapper` schema with owner-scoped state, transaction-protected creation and feedback, and atomic advancement leases. Vercel never falls back to ephemeral SQLite. Configure provider credentials as private environment variables; require pilot access before enabling any live budget. No paid add-ons are needed for this MVP.
+
+## Checks
+
+```sh
+npm run test
+npm run lint
+npm run typecheck
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Browser tests default to http://127.0.0.1:3173; use `TEST_BASE_URL` to check another running server. `npm run test:database` uses the configured Neon database, creates temporary validation scans, uses a simulated provider, and removes those scans. It does not make paid source calls. The two `scripts/validate-*.ts` live validation scripts require explicit authorization and retain private one-run markers to prevent accidental repeated spending.
+
+## Research and deferred work
+
+[Research](docs/research.md) records competitors, source limitations, customer hypotheses and proposed economics. [MVP plan](docs/mvp-plan.md) is the original implementation specification. Neither validates demand, source rights, or a subscription price.
+
+Instagram-wide discovery, automatic outreach, scheduled monitoring, customer validation and checkout are deferred. No Stripe or merchant account was created. Amazon Pay and AWS Marketplace SaaS billing are different options; the exact service required for hackathon AWS-track eligibility has not been confirmed. Vercel hosting is independent of that unresolved payment requirement.

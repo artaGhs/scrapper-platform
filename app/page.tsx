@@ -189,6 +189,8 @@ function Result({
 
 export default function Home() {
   const [description, setDescription] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const progressSection = useRef<HTMLElement>(null);
   const [mode, setMode] = useState<Mode>("sample");
   const [scan, setScan] = useState<PublicScan | null>(null);
   const [error, setError] = useState("");
@@ -246,7 +248,7 @@ export default function Home() {
       } catch {
         if (active)
           setError(
-            "Could not connect to the local server. Reload the page to try again.",
+            "Could not connect to the server. Reload the page to try again.",
           );
       }
     }
@@ -304,9 +306,16 @@ export default function Home() {
     try {
       const next = await request<PublicScan>("/api/scans", {
         method: "POST",
+        headers: mode === "live" ? { "x-live-access": accessCode } : {},
         body: JSON.stringify({ description, mode, key: runKey.current }),
       });
       remember(next);
+      requestAnimationFrame(() =>
+        progressSection.current?.scrollIntoView({
+          block: "start",
+          behavior: "auto",
+        }),
+      );
       if (terminalStages.includes(next.stage)) resultsHeading.current?.focus();
     } catch (issue) {
       setError(
@@ -495,11 +504,27 @@ export default function Home() {
                   <span>Live Reddit</span>
                 </label>
               </fieldset>
+              {mode === "live" && (
+                <div className="pilot-access">
+                  <label htmlFor="access-code" className="field-label">
+                    Pilot access code
+                  </label>
+                  <input
+                    id="access-code"
+                    type="password"
+                    autoComplete="off"
+                    value={accessCode}
+                    onChange={(event) => setAccessCode(event.target.value)}
+                    disabled={busy}
+                    placeholder="Provided by the operator"
+                  />
+                </div>
+              )}
               <div className="run-row">
                 <p>
                   {mode === "sample"
                     ? "Fictional examples. No live search or original post links."
-                    : "One source. Up to 100 records. Requires a local connection."}
+                    : "One source. Up to 50 records. Pilot access required."}
                 </p>
                 <button
                   className="run-button"
@@ -536,6 +561,7 @@ export default function Home() {
 
         {scan && (
           <section
+            ref={progressSection}
             className="scan-section"
             aria-label="Search progress and results"
           >
@@ -581,6 +607,9 @@ export default function Home() {
                   ))}
                 </div>
                 <p>
+                  {scan.business.queryMethod === "Gemini draft"
+                    ? "Gemini drafted these grounded search phrases. "
+                    : "Search phrases use your stated keywords. "}
                   Conservative keyword matching checks explicit requests and
                   shared details. It can miss nuance; review every result.
                 </p>

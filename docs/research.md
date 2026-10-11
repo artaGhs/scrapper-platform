@@ -1,5 +1,7 @@
 # Research and commercial plan
 
+> Implementation update (October 11, 2026): the MVP is now built with Vercel/Neon storage and a gated source connector. See [README](../README.md) and [observed validation](validation.md). The original hypotheses and unresolved rights below remain research, not validated outcomes.
+
 Research date: **October 11, 2026**. Scope: public vendor pages and documentation, plus product and validation hypotheses. No authenticated integration tests, purchased data, interviews, verified customer revenue, or independently measured coverage. Currency is USD unless indicated otherwise. Listed prices describe public pages, not negotiated rates or all-in costs.
 
 ## 1. Problem and value proposition

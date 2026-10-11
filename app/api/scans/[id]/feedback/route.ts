@@ -23,7 +23,9 @@ export async function POST(
       throw new AppError("Choose a valid result and feedback action.");
     return json(
       publicScan(
-        store().feedback(
+        await (
+          await store()
+        ).feedback(
           (await params).id,
           owner,
           input.data.resultId,

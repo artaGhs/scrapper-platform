@@ -1,3 +1,4 @@
+import { MAX_ITEMS } from "./config";
 import type { Business, Opportunity, SourceItem } from "./types";
 
 const categories = [
@@ -139,7 +140,7 @@ export function normalize(records: unknown[], now = Date.now()): SourceItem[] {
   const seen = new Set<string>();
   const texts = new Set<string>();
   const output: SourceItem[] = [];
-  for (const record of records.slice(0, 100)) {
+  for (const record of records.slice(0, MAX_ITEMS)) {
     if (!record || typeof record !== "object") continue;
     const row = record as Record<string, unknown>;
     const url = originalUrl(row.url);
@@ -225,7 +226,7 @@ export function rank(
     results.push({
       ...item,
       evidence: evidence.trim().slice(0, 700),
-      reason: `This request mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. Review the original context to confirm the fit.`,
+      reason: `This request mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
       need: /alternative|instead of|switch from/i.test(content)
         ? "Alternative request"
         : "Solution request",

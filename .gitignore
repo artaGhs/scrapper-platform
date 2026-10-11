@@ -32,4 +32,3 @@ data/raw/
 test-results/
 playwright-report/
 .vercel
-.env*

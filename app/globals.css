@@ -924,3 +924,78 @@ footer {
     outline: 4px solid var(--accent-soft);
   }
 }
+
+.scan-section {
+  scroll-margin-top: 24px;
+}
+.pilot-access {
+  margin-bottom: 16px;
+}
+.pilot-access input {
+  width: 100%;
+  padding: 10px 12px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+}
+@media (max-width: 800px) {
+  .site-header {
+    height: 70px;
+  }
+  .workspace {
+    padding: 24px 0 32px;
+    gap: 22px;
+  }
+  .intro-label {
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+  h1 {
+    font-size: clamp(36px, 8.7vw, 62px);
+    margin-bottom: 14px;
+  }
+  .intro-copy {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .intro-note {
+    display: none;
+  }
+  .panel-heading {
+    margin-bottom: 18px;
+  }
+  textarea {
+    min-height: 120px;
+    padding: 12px;
+  }
+  .examples {
+    margin: 14px 0;
+  }
+  .mode-options {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .workspace {
+    padding-top: 18px;
+    gap: 18px;
+  }
+  .intro-label {
+    display: none;
+  }
+  h1 {
+    margin-bottom: 12px;
+  }
+  .intro-copy {
+    font-size: 14px;
+  }
+  .panel-heading {
+    margin-bottom: 14px;
+  }
+  textarea {
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 110px;
+  }
+}

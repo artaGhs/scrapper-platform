@@ -21,6 +21,7 @@ export interface Business {
   terms: string[];
   featureTerms: string[];
   queries: string[];
+  queryMethod?: "Gemini draft";
 }
 export interface SourceItem {
   id: string;

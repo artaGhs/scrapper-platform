@@ -1,5 +1,7 @@
 # Executable MVP specification
 
+> Implementation update (October 11, 2026): the MVP is now built with Vercel/Neon storage and a gated source connector. See [README](../README.md) and [observed validation](validation.md). The original hypotheses and unresolved rights below remain research, not validated outcomes.
+
 Planning date: **October 11, 2026**. Target: approximately four hours of future implementation by an experienced builder with a ready environment and feasible source. This is an estimate, not a delivery promise. Current authorization is research/planning and GitHub setup; the steps below have not been implemented.
 
 ## 1. Outcome and scope
@@ -18,16 +20,16 @@ Input placeholder: “We estimate calories from food photos so people don't have
 
 Show the actual enabled source. Until multiple integrations work, do not advertise simultaneous Reddit/X/Instagram search. After interpretation, show a compact editable summary of audience and need; allow correction without turning the page into a long onboarding flow.
 
-| State | Visible behavior | Transition |
-| --- | --- | --- |
-| Input | Description and Run button; concise source/scope statement | Valid input creates or resumes one scan |
-| Interpretation | “Understanding your business”; then audience/problem summary | Prepare three to five phrases |
-| Search | Actual source name and indeterminate progress while provider is pending | Poll actual provider job through server |
-| Review/rank | Real returned-item count, only if available; review/ranking stage | Normalize, filter and score once |
-| Results | Up to ten useful linked cards, with Save and Not relevant | Open original or refine input |
-| Empty | Honest explanation that no strong matches were found in this bounded search | Edit description/phrases and explicitly rerun |
-| Partial | Actual available results plus a short explanation of incomplete retrieval | User decides whether to retry remaining work |
-| Failure | Clear actionable message and retry where appropriate | Bounded recovery; preserve input |
+| State          | Visible behavior                                                            | Transition                                    |
+| -------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
+| Input          | Description and Run button; concise source/scope statement                  | Valid input creates or resumes one scan       |
+| Interpretation | “Understanding your business”; then audience/problem summary                | Prepare three to five phrases                 |
+| Search         | Actual source name and indeterminate progress while provider is pending     | Poll actual provider job through server       |
+| Review/rank    | Real returned-item count, only if available; review/ranking stage           | Normalize, filter and score once              |
+| Results        | Up to ten useful linked cards, with Save and Not relevant                   | Open original or refine input                 |
+| Empty          | Honest explanation that no strong matches were found in this bounded search | Edit description/phrases and explicitly rerun |
+| Partial        | Actual available results plus a short explanation of incomplete retrieval   | User decides whether to retry remaining work  |
+| Failure        | Clear actionable message and retry where appropriate                        | Bounded recovery; preserve input              |
 
 The cool searching animation should visually connect interpretation, query preparation, source search, review, and ranking. Animate only transitions grounded in job state. Do not invent percentages, results, counts, elapsed-work claims, or networks searched. Use an indeterminate animation when completion is unknown; slow provider response is preferable to false progress. Respect reduced-motion preferences and announce stage changes accessibly.
 
@@ -64,12 +66,12 @@ Normalize each component to 0–1, then calculate:
 
 `relevance = 100 × (0.40 × fit + 0.35 × explicit_need + 0.15 × freshness + 0.10 × specificity)`
 
-| Component | High value | Low value |
-| --- | --- | --- |
-| Fit, 40% | Stated need matches a confirmed capability and audience | Topic overlap only or a capability the business does not offer |
-| Explicit need, 35% | Direct request for a tool, solution, or suitable alternative | General commentary, jokes, promotion, vague interest |
-| Freshness, 15% | Within chosen recent window with credible publication date | Stale content; unknown date gets no inferred boost |
-| Specificity, 10% | Concrete constraints that the product addresses | Ambiguous problem or missing context |
+| Component          | High value                                                   | Low value                                                      |
+| ------------------ | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| Fit, 40%           | Stated need matches a confirmed capability and audience      | Topic overlap only or a capability the business does not offer |
+| Explicit need, 35% | Direct request for a tool, solution, or suitable alternative | General commentary, jokes, promotion, vague interest           |
+| Freshness, 15%     | Within chosen recent window with credible publication date   | Stale content; unknown date gets no inferred boost             |
+| Specificity, 10%   | Concrete constraints that the product addresses              | Ambiguous problem or missing context                           |
 
 Proposed initial gate: explicit need and fit must both be supported; then apply a candidate score threshold calibrated against a human-labeled sample. The gate matters more than an arbitrary total. Do not invent a calibrated threshold before seeing data. A high freshness score cannot rescue a post with no need.
 
@@ -92,11 +94,11 @@ Landing/chat page
 
 ### Proposed server API
 
-| Route | Request/response | Required behavior |
-| --- | --- | --- |
-| `POST /api/scans` | Description, enabled source, idempotency key → scan ID and current stage | Validate input; check budget; associate session; persist before starting/resuming one provider run |
-| `GET /api/scans/:id` | Stage, real counts where known, safe error, results when ready | Require owning session; resume bounded state transitions; never start a duplicate provider job or repeat completed scoring |
-| `POST /api/scans/:id/feedback` | Result ID plus saved/not_relevant state, optional reason | Verify ownership and result membership; repeated same action is idempotent |
+| Route                          | Request/response                                                         | Required behavior                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/scans`              | Description, enabled source, idempotency key → scan ID and current stage | Validate input; check budget; associate session; persist before starting/resuming one provider run                         |
+| `GET /api/scans/:id`           | Stage, real counts where known, safe error, results when ready           | Require owning session; resume bounded state transitions; never start a duplicate provider job or repeat completed scoring |
+| `POST /api/scans/:id/feedback` | Result ID plus saved/not_relevant state, optional reason                 | Verify ownership and result membership; repeated same action is idempotent                                                 |
 
 Use a server-issued opaque session cookie before full accounts. Enforce ownership at every route. Internal provider IDs, credentials, raw errors, and other users' scans are not exposed in browser responses.
 
@@ -104,11 +106,11 @@ Proposed stages: `created`, `interpreting`, `preparing`, `searching`, `reviewing
 
 ### Minimal stored records
 
-| Record | Proposed fields |
-| --- | --- |
-| Scan | ID, session owner, description, structured business, source, queries, stage, created/updated time, idempotency key, provider run/dataset IDs, result/page limits, deadline, reserved/actual cost, safe error |
-| Opportunity | Scan ID, source record ID, canonical original URL, text/excerpt, platform/community, nullable publication time, retrieval time, need type, evidence, fit reason, rubric components, rank |
-| Feedback | Session, scan/result IDs, saved/not_relevant state, optional reason, timestamp |
+| Record      | Proposed fields                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Scan        | ID, session owner, description, structured business, source, queries, stage, created/updated time, idempotency key, provider run/dataset IDs, result/page limits, deadline, reserved/actual cost, safe error |
+| Opportunity | Scan ID, source record ID, canonical original URL, text/excerpt, platform/community, nullable publication time, retrieval time, need type, evidence, fit reason, rubric components, rank                     |
+| Feedback    | Session, scan/result IDs, saved/not_relevant state, optional reason, timestamp                                                                                                                               |
 
 Select content retention and excerpt storage according to permitted use. Do not add author profiles, inferred contact details, or raw provider exports by default. Handle deleted/unavailable originals and retention expiry; a stored excerpt must not be treated as permanently authorized simply because it was once public.
 
@@ -121,7 +123,7 @@ For a paginated search provider, persist cursor, retrieved count, and deadline. 
 ### Proposed operational defaults to validate
 
 - One source and at most five queries per scan.
-- Start with at most 100–200 total returned records, adjusted for provider billing semantics and minimums.
+- The implemented MVP caps retrieval at 50 records; the one authorized live validation requested at most 15. Keep caps aligned with provider billing semantics and minimums.
 - Return at most ten qualifying results; the eventual free scan may expose at most five.
 - Limit description length, requests per session, active scans, model tokens, and total provider spend before making requests.
 - Poll at a modest interval with backoff; use a scan-level deadline and a small bounded retry allowance.
@@ -132,40 +134,40 @@ The exact dollar cap, retention window, timeout and poll interval are unresolved
 
 ## 5. Four-hour future build schedule
 
-| Minutes | Deliverable | Exit condition |
-| --- | --- | --- |
-| 0–25 | Authorized source sample, schema mapping and feasibility check | Real links/text/dates available, cost bounded, permitted intended use addressed; otherwise labeled demo mode |
-| 25–70 | Single landing/chat and all basic UI states | Input to empty/error/results flow visible; source and sample/live mode truthful |
-| 70–130 | Create/poll scan routes, provider adapter, persistence and normalization | One bounded run resumes across polls without duplication |
-| 130–180 | Qualification, scoring, reasons, dedupe and limits | Strong requests rank above generic overlap; no invented metadata |
-| 180–215 | Truthful animation, Save and Not relevant | Real stages/counts; persistent session feedback |
-| 215–240 | Success/failure/repeated-click checks and three-business demos | Evidence and remaining limits recorded |
+| Minutes | Deliverable                                                              | Exit condition                                                                                               |
+| ------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| 0–25    | Authorized source sample, schema mapping and feasibility check           | Real links/text/dates available, cost bounded, permitted intended use addressed; otherwise labeled demo mode |
+| 25–70   | Single landing/chat and all basic UI states                              | Input to empty/error/results flow visible; source and sample/live mode truthful                              |
+| 70–130  | Create/poll scan routes, provider adapter, persistence and normalization | One bounded run resumes across polls without duplication                                                     |
+| 130–180 | Qualification, scoring, reasons, dedupe and limits                       | Strong requests rank above generic overlap; no invented metadata                                             |
+| 180–215 | Truthful animation, Save and Not relevant                                | Real stages/counts; persistent session feedback                                                              |
+| 215–240 | Success/failure/repeated-click checks and three-business demos           | Evidence and remaining limits recorded                                                                       |
 
 Assumptions: ready developer environment, provider access and any permitted budget, available model access, and one deployable/runtime-compatible persistent store. The sample gate may consume the window if access is blocked. In that case, use clearly labeled fixtures for an interface demo and stop claiming live discovery. No actual sample dataset has been created as part of this planning work.
 
-If time is short, cut reply drafts first, then optional polish. Preserve real source links, truthful state, relevant results, no duplicate charges, and bounded spend. Authentication for full accounts, Stripe subscriptions, scheduler/digest delivery, teams, and broader data coverage are separate milestones.
+If time is short, cut reply drafts first, then optional polish. Preserve real source links, truthful state, relevant results, no duplicate charges, and bounded spend. Authentication for full accounts, payment-provider integration (AWS-track service eligibility unconfirmed), scheduler/digest delivery, teams, and broader data coverage are separate milestones.
 
 ## 6. Acceptance and verification plan
 
 Future checks should verify observable behavior and material risks, not duplicate internal implementation. No application tests can run now because no app exists.
 
-| Scenario | Required observable result |
-| --- | --- |
-| Valid description and available source | Real bounded retrieval returns correctly linked results with grounded explanations |
-| Generic topic match | Does not pass solely because it mentions a keyword |
-| No qualifying posts | Honest empty state; no fabricated cards or automatic widening/spend |
-| Missing/invalid publication time | Time unknown; no invented recency |
-| Duplicate post/comment/thread | Repeated content does not dominate results |
-| Slow job | Indeterminate source-specific animation, input preserved, deadline enforced |
-| Provider auth/payment/permission error | Clear failure; no unbounded retries or secrets in UI/logs |
-| Partial source failure | Only actual retrieved/qualified results shown, with incomplete status |
-| Repeated clicks, concurrent polls, page reload | Same scan resumes; no duplicate run or model scoring |
-| Different session requests scan/result | Access denied without leaking content |
-| Prompt injection in source text | Treated as text; ranking stays within original task and produces validated evidence |
-| Save / Not relevant / Open | Feedback persists; Open is tracked only as an open |
-| Sample mode | Prominent sample label; never represented as live or fresh discovery |
-| Budget/item/page cap | Stops within configured limits and reports actual status |
-| Keyboard and reduced motion | Usable form/actions, sensible focus and readable stage changes |
+| Scenario                                       | Required observable result                                                          |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Valid description and available source         | Real bounded retrieval returns correctly linked results with grounded explanations  |
+| Generic topic match                            | Does not pass solely because it mentions a keyword                                  |
+| No qualifying posts                            | Honest empty state; no fabricated cards or automatic widening/spend                 |
+| Missing/invalid publication time               | Time unknown; no invented recency                                                   |
+| Duplicate post/comment/thread                  | Repeated content does not dominate results                                          |
+| Slow job                                       | Indeterminate source-specific animation, input preserved, deadline enforced         |
+| Provider auth/payment/permission error         | Clear failure; no unbounded retries or secrets in UI/logs                           |
+| Partial source failure                         | Only actual retrieved/qualified results shown, with incomplete status               |
+| Repeated clicks, concurrent polls, page reload | Same scan resumes; no duplicate run or model scoring                                |
+| Different session requests scan/result         | Access denied without leaking content                                               |
+| Prompt injection in source text                | Treated as text; ranking stays within original task and produces validated evidence |
+| Save / Not relevant / Open                     | Feedback persists; Open is tracked only as an open                                  |
+| Sample mode                                    | Prominent sample label; never represented as live or fresh discovery                |
+| Budget/item/page cap                           | Stops within configured limits and reports actual status                            |
+| Keyboard and reduced motion                    | Usable form/actions, sensible focus and readable stage changes                      |
 
 Demonstrate the food-photo example and two chosen commercial categories. Evaluate relevance against a small human-labeled sample, recording actual denominators and false positives. Proposed commercial gates—useful top results, fresh supply across days, owner participation interest, paid pilot acceptance, and measured costs—are detailed in [research](research.md#7-economics-and-measurement).
 

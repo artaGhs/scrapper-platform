@@ -52,7 +52,7 @@ export class RedditProvider {
     if (!response.ok) {
       const reason =
         response.status === 401 || response.status === 403
-          ? "Check the local source credential and access permissions."
+          ? "Check the source credential and access permissions."
           : response.status === 402
             ? "The provider account has no usable balance. Sample examples are still available."
             : response.status === 429
@@ -85,6 +85,9 @@ export class RedditProvider {
           searchCommunities: false,
           searchUsers: false,
           skipComments: true,
+          skipCommunity: true,
+          skipUserPosts: true,
+          searchMedia: false,
           includeNSFW: false,
           maxItems: limit,
           maxPostCount: Math.ceil(limit / Math.max(1, business.queries.length)),

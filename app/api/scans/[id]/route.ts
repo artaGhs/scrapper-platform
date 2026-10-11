@@ -4,6 +4,7 @@ import { failure, json, sameOrigin, session } from "@/lib/http";
 import { advance } from "@/lib/service";
 import { publicScan } from "@/lib/types";
 export const runtime = "nodejs";
+export const maxDuration = 30;
 // POST advances state; polling GET must not cause side effects or provider spending.
 export async function POST(
   request: NextRequest,
@@ -26,7 +27,7 @@ export async function GET(
     const owner = session(request);
     if (!owner) throw new AppError("Search not found or expired.", 404);
     const { store } = await import("@/lib/store");
-    const scan = store().get((await params).id, owner);
+    const scan = await (await store()).get((await params).id, owner);
     if (!scan) throw new AppError("Search not found or expired.", 404);
     return json(publicScan(scan));
   } catch (error) {
