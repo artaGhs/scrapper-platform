@@ -24,7 +24,7 @@ A desktop or mobile browser, a short product description, and original public di
 
 ## Capabilities and Constraints
 
-One-page Next.js/React prototype, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Live Reddit connector is configurable; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. No global Instagram, checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
+One-page Next.js/React prototype with strict TypeScript for app, API, provider/storage and future AWS integration logic, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Live Reddit connector is configurable; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. No global Instagram, checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
 
 ## Brand Commitments
 

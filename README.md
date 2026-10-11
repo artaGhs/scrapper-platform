@@ -6,6 +6,10 @@ Describe a business, run a bounded search, and review conversations where someon
 
 **Implemented MVP, October 11, 2026.** A Next.js app with sample demonstrations, a gated Reddit connector, optional Gemini search-phrase drafting, truthful progress, up to ten ranked results, and persistent Save / Not relevant feedback. Vercel uses free Neon Postgres; local development can use SQLite. Commercial source permissions and useful live coverage remain unresolved.
 
+## Codebase requirement
+
+Application logic, API routes, provider adapters, storage integrations and operational scripts use TypeScript with strict type checking. Future AWS integration logic must also be implemented in TypeScript once the exact eligible service is confirmed. Conventional framework/tool configuration files may use JS/MJS.
+
 ## Run locally
 
 Node 22.13 or newer is required.
