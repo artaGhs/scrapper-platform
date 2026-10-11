@@ -1,5 +1,5 @@
 {
-  "name": "scrapper-platform",
+  "name": "threadfinder",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -11,13 +11,23 @@
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "MONETIZATION_ENABLED=false tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
     "db:setup": "tsx scripts/setup-database.ts",
-    "test:database": "tsx scripts/validate-database.ts"
+    "test:database": "tsx scripts/validate-database.ts",
+    "billing:check": "tsx scripts/check-billing.ts"
   },
   "dependencies": {
+    "@aws-app-monetization/sdk": "^0.1.1791657605",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1149.0",
+    "@aws-sdk/client-freetier": "^3.1149.0",
+    "@aws-sdk/client-iam": "^3.1149.0",
+    "@aws-sdk/client-sts": "^3.1149.0",
     "@neondatabase/serverless": "^1.2.0",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/oidc": "^4.0.0",
+    "dotenv": "^18.0.7",
+    "jose": "^6.2.12",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

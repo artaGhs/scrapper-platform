@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import BrandMark from "@/components/brand-mark";
 
 export default function ErrorPage({ retry }: { retry: () => void }) {
   return (
     <main className="information-page">
       <Link className="wordmark" href="/">
-        scrapper.
+        <BrandMark size={24} />
+        ThreadFinder.
       </Link>
       <h1>This page couldn’t load.</h1>
       <p>

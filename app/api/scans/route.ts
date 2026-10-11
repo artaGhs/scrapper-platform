@@ -14,6 +14,9 @@ import {
 import { store } from "@/lib/store";
 import { publicScan, selectedSources } from "@/lib/types";
 import { developerSession } from "@/lib/developer";
+import { billingEnabled } from "@/lib/monetize";
+import { searchAccess } from "@/lib/billing";
+import { customerSession } from "@/lib/customer-auth";
 export const runtime = "nodejs";
 const schema = z
   .object({
@@ -36,7 +39,10 @@ export async function POST(request: NextRequest) {
       throw new AppError(
         "Describe your business in 20–1,500 characters and choose a search mode.",
       );
-    const owner = session(request) || newSession();
+    const billing = billingEnabled();
+    const customer = billing ? await customerSession(request) : null;
+    if (billing && !customer) throw new AppError("Sign in to start your trial or use your plan.", 401);
+    const owner = customer?.owner || session(request) || newSession();
     const developer = developerSession(request);
     if (input.data.mode === "sample" && !developer)
       throw new AppError("Sample research requires developer access.", 403);
@@ -45,6 +51,9 @@ export async function POST(request: NextRequest) {
     if (!developer) await repository.throttle(ipHash);
     const sources = selectedSources(input.data.sources);
     const config = input.data.mode === "live" ? liveConfig(sources) : undefined;
+    const access = config && billing
+      ? await searchAccess(owner, await repository.trial(owner))
+      : undefined;
     const scan = await repository.create(
       owner,
       input.data.key,
@@ -59,7 +68,9 @@ export async function POST(request: NextRequest) {
       config?.hourlyBudget,
       sources,
       config
-        ? { ipHash, dailyBudget: config.dailyBudget, free: true, developer }
+        ? { ipHash, dailyBudget: config.dailyBudget, free: access?.free ?? true,
+            fullResults: access?.fullResults, trialExpiresAt: access?.trialExpiresAt,
+            developer, billingEventType: access?.billingEventType }
         : developer
           ? { ipHash, dailyBudget: 0, developer: true }
           : undefined,

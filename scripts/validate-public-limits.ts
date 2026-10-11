@@ -13,11 +13,11 @@ async function main() {
   const description =
     "Simulated admission test for calorie logging; never sent to a provider.";
   const clean = async () => {
-    await sql`DELETE FROM scrapper.scans WHERE starts_with(owner,${prefix})`;
+    await sql`DELETE FROM threadfinder.scans WHERE starts_with(owner,${prefix})`;
   };
   try {
     const sums =
-      await sql`SELECT coalesce(sum(reserved),0) AS reserved FROM scrapper.scans WHERE mode='live' AND NOT coalesce((body->>'developer')::boolean,false) AND created>${Date.now() - 86400_000}`;
+      await sql`SELECT coalesce(sum(reserved),0) AS reserved FROM threadfinder.scans WHERE mode='live' AND NOT coalesce((body->>'developer')::boolean,false) AND created>${Date.now() - 86400_000}`;
     const dayBudget = Number(sums[0].reserved) + 0.002;
     const attempts = await Promise.allSettled(
       Array.from({ length: 8 }, (_, i) =>
@@ -231,8 +231,8 @@ async function main() {
     );
   } finally {
     await clean();
-    await sql`DELETE FROM scrapper.request_limits WHERE ip_hash=${prefix}`;
-    await sql`DELETE FROM scrapper.free_usage WHERE starts_with(owner,${prefix})`;
+    await sql`DELETE FROM threadfinder.request_limits WHERE ip_hash=${prefix}`;
+    await sql`DELETE FROM threadfinder.free_usage WHERE starts_with(owner,${prefix})`;
   }
 }
 main().catch(() => {

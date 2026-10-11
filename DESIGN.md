@@ -1,5 +1,5 @@
 ---
-name: Scrapper platform
+name: ThreadFinder
 description: Night above the horizon, matches surfacing into daylight below
 colors:
   night: "#030a24"
@@ -99,7 +99,9 @@ components:
     padding: "28px"
 ---
 
-# Design System: Scrapper platform
+# Design System: ThreadFinder
+
+ThreadFinder's brand mark combines an open conversation bubble with a search lens. Use the shared `components/brand-mark.tsx` mark in the interface and matching white-on-Signal-Blue `app/icon.svg` in browser tabs.
 
 ## Overview
 

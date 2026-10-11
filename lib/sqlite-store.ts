@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { AppError, RETENTION_MS, xMonthlyRunLimit } from "./config";
 import { terminalStages, type Mode, type Scan, type Source } from "./types";
 import type { Admission } from "./store";
+import { TRIAL_DAYS } from "./pricing";
 
 export class ScanStore {
   private db: DatabaseSync;
@@ -27,6 +28,7 @@ export class ScanStore {
     this.db.exec(
       "CREATE TABLE IF NOT EXISTS free_usage (owner TEXT PRIMARY KEY, scan_id TEXT NOT NULL, consumed INTEGER NOT NULL DEFAULT 0)",
     );
+    this.db.exec("CREATE TABLE IF NOT EXISTS customer_trials (owner TEXT PRIMARY KEY, started INTEGER NOT NULL)");
   }
   close() {
     this.db.close();
@@ -36,6 +38,12 @@ export class ScanStore {
       .prepare("SELECT scan_id,consumed FROM free_usage WHERE owner=?")
       .get(owner);
     return { used: !!row?.consumed, scanId: row ? String(row.scan_id) : null };
+  }
+  trial(owner: string) {
+    this.db.prepare("INSERT INTO customer_trials(owner,started) VALUES(?,?) ON CONFLICT(owner) DO NOTHING").run(owner, Date.now());
+    const row = this.db.prepare("SELECT started FROM customer_trials WHERE owner=?").get(owner)!;
+    const startsAt = Number(row.started);
+    return { ...this.allowance(owner), startsAt, expiresAt: startsAt + TRIAL_DAYS * 86400_000 };
   }
   consumeFree(scan: Scan): void {
     this.db.exec("BEGIN IMMEDIATE");
@@ -246,6 +254,9 @@ export class ScanStore {
           .run(month);
       }
       const scan: Scan = {
+        billingEventType: admission?.billingEventType,
+        fullResults: admission?.fullResults,
+        trialExpiresAt: admission?.trialExpiresAt,
         free: admission?.free,
         developer: admission?.developer,
         id: randomUUID(),

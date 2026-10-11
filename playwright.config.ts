@@ -23,6 +23,7 @@ export default defineConfig({
           VERCEL: "",
           APIFY_TOKEN: "",
           GEMINI_API_KEY: "",
+          MONETIZATION_ENABLED: "false",
           LIVE_SCAN_BUDGET_USD: "0",
           SCAN_DB_PATH: ".data/browser-tests.sqlite",
           DEVELOPER_ACCESS_KEY:

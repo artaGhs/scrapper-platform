@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@aws-app-monetization/sdk"],
+  outputFileTracingExcludes: {
+    "/*": [".monetize/**", ".env*", ".npmrc", ".aws/**"],
+  },
   poweredByHeader: false,
   async headers() {
     return [

@@ -13,6 +13,7 @@ import {
   session,
 } from "@/lib/http";
 import { store } from "@/lib/store";
+import { clearBillingSession } from "@/lib/monetization-session";
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function DELETE(request: NextRequest) {
   try {
     sameOrigin(request);
     return attachDeveloper(
-      json({ developer: false }),
+      clearBillingSession(json({ developer: false })),
       request,
       session(request) || "",
       false,

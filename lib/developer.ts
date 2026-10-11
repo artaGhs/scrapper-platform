@@ -1,8 +1,8 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
-import { session } from "./http";
+import { session, sessionCookie } from "./http";
 
-const cookieName = "scrapper_developer";
+const cookieName = "threadfinder_developer";
 const lifetime = 7 * 86400;
 function key() {
   const value = process.env.DEVELOPER_ACCESS_KEY?.trim();
@@ -26,7 +26,9 @@ function signature(owner: string, expires: string, secret: string) {
 export function developerSession(request: NextRequest): boolean {
   const secret = key(),
     owner = session(request);
-  const token = request.cookies.get(cookieName)?.value;
+  const priorName = sessionCookie(request)?.name.replace(/_session$/, "_developer");
+  const token = request.cookies.get(cookieName)?.value ||
+    (priorName ? request.cookies.get(priorName)?.value : undefined);
   if (!secret || !owner || !token) return false;
   const parts = /^(\d{13})\.([a-f0-9]{64})$/.exec(token);
   if (
@@ -48,6 +50,8 @@ export function attachDeveloper(
 ) {
   const expires = String(Date.now() + lifetime * 1000);
   const secret = key();
+  const priorName = sessionCookie(request)?.name.replace(/_session$/, "_developer");
+  if (priorName && priorName !== cookieName) response.cookies.delete(priorName);
   response.cookies.set(
     cookieName,
     enabled && secret ? `${expires}.${signature(owner, expires, secret)}` : "",

@@ -28,7 +28,7 @@ One-page Next.js/React prototype with strict TypeScript for app, API, provider/s
 
 ## Brand Commitments
 
-Project name Scrapper platform. Plain factual language, very simple landing directly connected to chat. No existing visual assets or established style.
+Project name ThreadFinder. Plain factual language, very simple landing directly connected to chat. No existing visual assets or established style.
 
 ## Evidence on Hand
 

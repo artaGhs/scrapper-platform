@@ -14,8 +14,10 @@ import {
   useRef,
   useState,
   ViewTransition,
+  type CSSProperties,
 } from "react";
 import Link from "next/link";
+import BrandMark from "@/components/brand-mark";
 import {
   terminalStages,
   sourceNames,
@@ -87,30 +89,6 @@ function Cursor() {
     </svg>
   );
 }
-function Mark({ size = 28 }: { size?: number }) {
-  return (
-    <svg
-      aria-hidden="true"
-      width={size}
-      height={size}
-      viewBox="0 0 28 28"
-      fill="none"
-    >
-      <path
-        d="M3 5h22v15H14l-8 5v-5H3z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 10h12M8 15h7"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 class RequestError extends Error {
   constructor(
     message: string,
@@ -176,6 +154,7 @@ function Result({
   return (
     <article
       className={`result ${item.synthetic ? "is-fictional" : ""} ${item.irrelevant ? "is-dismissed" : ""}`}
+      style={{ "--i": index } as CSSProperties}
     >
       <span className="result-index" aria-hidden="true">
         {String(index + 1).padStart(2, "0")}
@@ -255,6 +234,8 @@ export default function Home() {
   const [starting, setStarting] = useState(false);
   const [ready, setReady] = useState(false);
   const [developer, setDeveloper] = useState(false);
+  const [billingEnabled, setBillingEnabled] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [freeSearchUsed, setFreeSearchUsed] = useState(false);
   const [freeScanId, setFreeScanId] = useState<string | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState(false);
@@ -272,7 +253,7 @@ export default function Home() {
       setFreeScanId(next.id);
     }
     try {
-      localStorage.setItem("scrapper-scan", JSON.stringify({ id: next.id }));
+      localStorage.setItem("threadfinder-scan", JSON.stringify({ id: next.id }));
     } catch {
       /* The server state still works without browser storage. */
     }
@@ -285,17 +266,33 @@ export default function Home() {
       try {
         const allowance = await request<{
           developer?: boolean;
+          billingEnabled?: boolean;
+          signedIn?: boolean;
           freeSearchUsed: boolean;
           freeScanId: string | null;
         }>("/api/session");
         if (!active) return;
         setDeveloper(!!allowance.developer);
+        setBillingEnabled(!!allowance.billingEnabled);
+        setSignedIn(!!allowance.signedIn);
         setFreeSearchUsed(allowance.freeSearchUsed);
         setFreeScanId(allowance.freeScanId);
         let cached: { id?: string } = {};
         try {
+          if (!localStorage.getItem("threadfinder-scan")) {
+            const previousKeys = Object.keys(localStorage).filter((key) => key.endsWith("-scan"));
+            if (previousKeys.length === 1) {
+              const previousKey = previousKeys[0];
+              const previous = localStorage.getItem(previousKey);
+              const parsed = previous ? JSON.parse(previous) : null;
+              if (parsed && typeof parsed.id === "string") {
+                localStorage.setItem("threadfinder-scan", JSON.stringify({ id: parsed.id }));
+                localStorage.removeItem(previousKey);
+              }
+            }
+          }
           const saved = JSON.parse(
-            localStorage.getItem("scrapper-scan") || "{}",
+            localStorage.getItem("threadfinder-scan") || "{}",
           );
           if (saved && typeof saved.id === "string") cached = { id: saved.id };
         } catch {
@@ -324,7 +321,7 @@ export default function Home() {
             ) {
               setFreeScanId(null);
               try {
-                localStorage.removeItem("scrapper-scan");
+                localStorage.removeItem("threadfinder-scan");
               } catch {
                 /* Optional storage. */
               }
@@ -487,7 +484,7 @@ export default function Home() {
     setFilter("all");
     runKey.current = null;
     try {
-      localStorage.removeItem("scrapper-scan");
+      localStorage.removeItem("threadfinder-scan");
     } catch {
       /* Optional storage. */
     }
@@ -528,16 +525,18 @@ export default function Home() {
           <span className="stars stars-twinkle" />
         </div>
         <header className="site-header">
-          <Link href="/" className="wordmark" aria-label="Scrapper home">
-            <Mark size={24} />
+          <Link href="/" className="wordmark" aria-label="ThreadFinder home">
+            <BrandMark size={24} />
             <span>
-              scrapper<span className="wordmark-period">.</span>
+              ThreadFinder<span className="wordmark-period">.</span>
             </span>
           </Link>
           {!scan && (
             <nav className="site-nav" aria-label="Page">
               <a href="#how">How it works</a>
               <a href="#results-info">What you get</a>
+              {(developer || billingEnabled) && <Link href="/billing">Plans and billing</Link>}
+              {billingEnabled && !signedIn && <Link href="/api/auth/login?next=/">Start free trial</Link>}
             </nav>
           )}
           {developer && (
@@ -630,7 +629,7 @@ export default function Home() {
             </div>
             <div className="composer-toolbar">
               <span className="chip source-chip">
-                <Mark size={15} />
+                <BrandMark size={15} />
                 Reddit
               </span>
               <button
@@ -778,9 +777,12 @@ export default function Home() {
             {busy && (
               <div className="working-state">
                 <p role="status" aria-live="polite">
-                  {pollPaused
-                    ? "Search paused · resume when connected"
-                    : status}
+                  {/* Keyed so each new stage swaps in; the live region itself stays mounted. */}
+                  <span className="status-line" key={pollPaused ? "paused" : status}>
+                    {pollPaused
+                      ? "Search paused · resume when connected"
+                      : status}
+                  </span>
                 </p>
                 <span>
                   {scan.business
@@ -1014,7 +1016,7 @@ export default function Home() {
                       Your free preview includes three matches. Subscription
                       access will unlock the rest of the collected list.
                     </p>
-                    <p>Subscriptions are coming soon.</p>
+                    <p>{billingEnabled ? <Link href="/billing">See plans and start a full research search</Link> : "Subscriptions are coming soon."}</p>
                   </section>
                 )}
                 {scan.results.length > 0 && !visibleResults.length && (
@@ -1145,7 +1147,7 @@ export default function Home() {
         )}
         <div className="footer-line">
           <span>
-            scrapper.{" "}
+            ThreadFinder.{" "}
             <span className="footer-sub">Listen first. Be useful.</span>
           </span>
           <Link href="/privacy">Privacy &amp; data</Link>

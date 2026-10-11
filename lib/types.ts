@@ -76,6 +76,9 @@ export interface Opportunity extends SourceItem {
   reviewMethod?: "Gemini assessment" | "OpenAI assessment" | "Keyword rules";
 }
 export interface Scan {
+  fullResults?: boolean;
+  trialExpiresAt?: number;
+  billingEventType?: string;
   discoveryEngine?: "openai";
   developer?: boolean;
   free?: boolean;
@@ -122,6 +125,7 @@ export type PublicScan = Pick<
   | "error"
   | "free"
   | "developer"
+  | "fullResults"
 > & {
   freeSearchUsed?: boolean;
   sourceRuns?: PublicSourceRun[];
@@ -142,6 +146,7 @@ export function publicScan(
     stage: scan.stage,
     free: scan.free,
     developer: scan.developer,
+    fullResults: scan.fullResults,
     freeSearchUsed: scan.developer
       ? false
       : scan.free
@@ -173,15 +178,15 @@ export function publicScan(
     ),
     results: scan.results.slice(
       0,
-      scan.developer && scan.modelReview === "OpenAI assessment" ? 10 : 3,
+      scan.fullResults || (scan.developer && scan.modelReview === "OpenAI assessment") ? 10 : 3,
     ),
     matchCount:
-      scan.modelReview === "OpenAI assessment"
+      scan.fullResults || scan.modelReview === "OpenAI assessment"
         ? scan.results.length
         : scan.free
           ? Math.min(3, scan.results.length)
           : scan.results.length,
-    lockedCount: scan.developer
+    lockedCount: scan.developer || scan.fullResults
       ? 0
       : scan.modelReview === "OpenAI assessment"
         ? Math.max(0, scan.results.length - 3)

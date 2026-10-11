@@ -23,7 +23,7 @@ async function main() {
     run.startedAt.startsWith(month),
   ).length;
   const sql = neon(process.env.DATABASE_URL);
-  await sql`INSERT INTO scrapper.source_usage(source,month,used) VALUES ('x',${month},${used}) ON CONFLICT(source,month) DO UPDATE SET used=greatest(scrapper.source_usage.used,${used})`;
+  await sql`INSERT INTO threadfinder.source_usage(source,month,used) VALUES ('x',${month},${used}) ON CONFLICT(source,month) DO UPDATE SET used=greatest(threadfinder.source_usage.used,${used})`;
   console.log(
     `X allowance synced for ${month}: at least ${used} provider runs; existing reservations preserved.`,
   );

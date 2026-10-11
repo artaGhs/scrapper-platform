@@ -49,8 +49,8 @@ test("developer authentication rejects forged, expired, cross-session, disabled 
     assert(validDeveloperKey(secret));
     assert(!validDeveloperKey("wrong"));
     const response = attachDeveloper(json({}), req("/"), owner, true);
-    const value = response.cookies.get("scrapper_developer")!.value;
-    const cookie = `scrapper_session=${owner}; scrapper_developer=${value}`;
+    const value = response.cookies.get("threadfinder_developer")!.value;
+    const cookie = `threadfinder_session=${owner}; threadfinder_developer=${value}`;
     assert(developerSession(req("/", cookie)));
     assert.match(
       response.headers.get("set-cookie")!,
@@ -61,7 +61,7 @@ test("developer authentication rejects forged, expired, cross-session, disabled 
       !developerSession(
         req(
           "/",
-          `scrapper_session=${"b".repeat(64)}; scrapper_developer=${value}`,
+          `threadfinder_session=${"b".repeat(64)}; threadfinder_developer=${value}`,
         ),
       ),
     );
@@ -225,7 +225,7 @@ test("API authenticates developer bypass server-side, ignores forged client clai
     throw Error("No source call authorized");
   };
   try {
-    const anonymousCookie = `scrapper_session=${owner}`;
+    const anonymousCookie = `threadfinder_session=${owner}`;
     assert.equal(
       (
         await create(
@@ -276,8 +276,8 @@ test("API authenticates developer bypass server-side, ignores forged client clai
       req("/api/developer", anonymousCookie, { key: secret }),
     );
     assert.equal(response.status, 200);
-    const token = response.cookies.get("scrapper_developer")!.value;
-    const cookie = anonymousCookie + `; scrapper_developer=${token}`;
+    const token = response.cookies.get("threadfinder_developer")!.value;
+    const cookie = anonymousCookie + `; threadfinder_developer=${token}`;
     const sampleResponse = await create(
       req("/api/scans", cookie, {
         description,
@@ -381,7 +381,7 @@ test("API authenticates developer bypass server-side, ignores forged client clai
     const exited = await logout(
       req("/api/developer", cookie, undefined, "DELETE"),
     );
-    assert.equal(exited.cookies.get("scrapper_developer")?.value, "");
+    assert.equal(exited.cookies.get("threadfinder_developer")?.value, "");
     assert.equal(
       (await (await session(req("/api/session", anonymousCookie))).json())
         .freeSearchUsed,

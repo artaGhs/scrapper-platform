@@ -17,4 +17,6 @@ Preserve: one description → Run action; Reddit only, with no source selector; 
 
 Public release: live mode is the default. Visitors run research without a pilot code or provider keys; capacity limits return clear retry messages. One small free search per anonymous browser identity, up to three useful results, then a truthful free-search-used state with saved results.
 
-Unresolved: authenticated provider quality and commercial permission; whether "Scrapper" stays the public name (it changes the wordmark).
+App name: ThreadFinder. Use this spelling and capitalization in all public copy and wordmarks.
+
+Unresolved: authenticated provider quality and commercial permission.

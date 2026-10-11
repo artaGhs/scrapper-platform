@@ -123,7 +123,7 @@ async function main() {
       SELECT
         coalesce(sum(reserved) FILTER (WHERE created>${Date.now() - 3600_000}),0) AS hourly,
         coalesce(sum(reserved),0) AS daily
-      FROM scrapper.scans
+      FROM threadfinder.scans
       WHERE mode='live' AND created>${Date.now() - 86400_000}
         AND NOT coalesce((body->>'developer')::boolean,false)
     `;
@@ -156,7 +156,7 @@ async function main() {
         .every((result) => result.reason.status === 429),
     );
     const used =
-      await sql`SELECT used FROM scrapper.source_usage WHERE source='x' AND month=${month}`;
+      await sql`SELECT used FROM threadfinder.source_usage WHERE source='x' AND month=${month}`;
     process.env.X_MONTHLY_RUN_LIMIT = String(Number(used[0]?.used || 0) + 1);
     let xScan = await db.create(
       xOwner,
@@ -185,8 +185,8 @@ async function main() {
     if (priorXLimit === undefined) delete process.env.X_MONTHLY_RUN_LIMIT;
     else process.env.X_MONTHLY_RUN_LIMIT = priorXLimit;
     if (xReserved)
-      await sql`UPDATE scrapper.source_usage SET used=greatest(used-1,0) WHERE source='x' AND month=${month}`;
-    await sql`DELETE FROM scrapper.scans WHERE owner=${owner} OR owner=${other} OR owner = ANY(${budgetOwners}) OR owner=${xOwner} OR owner=${xOther}`;
+      await sql`UPDATE threadfinder.source_usage SET used=greatest(used-1,0) WHERE source='x' AND month=${month}`;
+    await sql`DELETE FROM threadfinder.scans WHERE owner=${owner} OR owner=${other} OR owner = ANY(${budgetOwners}) OR owner=${xOwner} OR owner=${xOther}`;
   }
 }
 main().catch((error: unknown) => {

@@ -5,7 +5,10 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   globalIgnores([
+    ".cache/**",
+    ".monetize/**",
     ".next/**",
+    ".vercel/**",
     ".claude/worktrees/**",
     ".data/**",
     "next-env.d.ts",

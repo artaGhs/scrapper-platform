@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ThreadFinderBillingOnly",
+      "Effect": "Allow",
+      "Action": [
+        "appmonetization:GetSubscription",
+        "appmonetization:GetEntitlementDecision",
+        "appmonetization:PutEvent",
+        "appmonetization:CreateSubscriptionCheckoutSession",
+        "appmonetization:CreateBillingPortalSession"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

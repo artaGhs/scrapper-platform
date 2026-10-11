@@ -2,6 +2,9 @@ import { AppError } from "./config";
 import type { Mode, Scan, Source } from "./types";
 type MaybePromise<T> = T | Promise<T>;
 export interface Admission {
+  billingEventType?: string;
+  fullResults?: boolean;
+  trialExpiresAt?: number;
   developer?: boolean;
   ipHash: string;
   dailyBudget: number;
@@ -11,7 +14,12 @@ export interface FreeAllowance {
   used: boolean;
   scanId: string | null;
 }
+export interface TrialAllowance extends FreeAllowance {
+  startsAt: number;
+  expiresAt: number;
+}
 export interface ScanRepository {
+  trial(owner: string): MaybePromise<TrialAllowance>;
   allowance(owner: string): MaybePromise<FreeAllowance>;
   consumeFree(scan: Scan): MaybePromise<void>;
   releaseFree(scan: Scan): MaybePromise<void>;

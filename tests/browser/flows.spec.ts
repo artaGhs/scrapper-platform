@@ -129,7 +129,7 @@ test("expired and developer-only cached results do not reappear for public visit
   );
   await page.evaluate(() =>
     localStorage.setItem(
-      "scrapper-scan",
+      "previous-scan",
       JSON.stringify({ id: "private-sample" }),
     ),
   );
@@ -143,7 +143,10 @@ test("expired and developer-only cached results do not reappear for public visit
   ).toBeEnabled();
   await expect(page.locator("article")).toHaveCount(0);
   expect(
-    await page.evaluate(() => localStorage.getItem("scrapper-scan")),
+    await page.evaluate(() => localStorage.getItem("threadfinder-scan")),
+  ).toBeNull();
+  expect(
+    await page.evaluate(() => localStorage.getItem("previous-scan")),
   ).toBeNull();
 });
 

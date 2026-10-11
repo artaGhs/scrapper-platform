@@ -12,7 +12,7 @@ const description =
   "We estimate calories from a food photo instead of manual ingredient logging.";
 
 test("sample scan completes once, rejects other sessions and persists feedback across reopen", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "scrapper-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "threadfinder-test-"));
   const path = join(dir, "scans.sqlite");
   let db = new ScanStore(path);
   try {

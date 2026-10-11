@@ -27,7 +27,7 @@ This establishes the prototype's mechanics and a bounded retrieval of real posts
 
 ## Deployment verification
 
-The Vercel production build completed and all six browser checks passed against the deployed application backed by Neon, including save/reload persistence and rejection of live requests without pilot access. The public URL is https://scrapper-platform-khaki.vercel.app. Deployment uploads explicitly exclude local environment files, private validation state and SQLite files; production credentials are configured through Vercel's private environment handling.
+The Vercel production build completed and all six browser checks passed against the deployed application backed by Neon, including save/reload persistence and rejection of live requests without pilot access. The production URL is available in the linked Vercel project. Deployment uploads explicitly exclude local environment files, private validation state and SQLite files; production credentials are configured through Vercel's private environment handling.
 
 ## Dependency and secret checks
 

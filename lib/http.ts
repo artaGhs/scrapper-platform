@@ -1,10 +1,25 @@
 import { randomBytes, createHmac } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "./config";
-const cookieName = "scrapper_session";
+import { customerSession } from "./customer-auth";
+import { billingEnabled } from "./monetize";
+const cookieName = "threadfinder_session";
+export function sessionCookie(request: NextRequest) {
+  const current = request.cookies.get(cookieName);
+  if (current) return current;
+  // Migrate a single older anonymous browser identity, preserving its ownership.
+  const previous = request.cookies.getAll().filter(
+    (cookie) => cookie.name.endsWith("_session") && /^[a-f0-9]{64}$/.test(cookie.value),
+  );
+  return previous.length === 1 ? previous[0] : undefined;
+}
 export function session(request: NextRequest): string | null {
-  const value = request.cookies.get(cookieName)?.value;
+  const value = sessionCookie(request)?.value;
   return value && /^[a-f0-9]{64}$/.test(value) ? value : null;
+}
+export async function requestOwner(request: NextRequest): Promise<string | null> {
+  if (!billingEnabled()) return session(request);
+  return (await customerSession(request))?.owner || null;
 }
 export function newSession(): string {
   return randomBytes(32).toString("hex");
@@ -14,9 +29,15 @@ export function attachSession(
   owner: string,
   request: NextRequest,
 ): NextResponse {
+  const previous = sessionCookie(request);
+  if (previous && previous.name !== cookieName && previous.value === owner) {
+    response.cookies.delete(previous.name);
+  }
   response.cookies.set(cookieName, owner, {
     httpOnly: true,
-    sameSite: "strict",
+    // Preserve the customer session on a top-level return from hosted checkout.
+    // State-changing routes independently enforce the request origin.
+    sameSite: "lax",
     secure: request.nextUrl.protocol === "https:",
     path: "/",
     maxAge: 30 * 86400,

@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BrandMark from "@/components/brand-mark";
 
 export const metadata: Metadata = {
-  title: "Privacy & data — Scrapper",
+  title: "Privacy & data — ThreadFinder",
   description:
-    "How Scrapper uses your business description, stores research, and remembers this browser.",
+    "How ThreadFinder uses your business description, stores research, and remembers this browser.",
 };
 
 export default function Privacy() {
   return (
     <main className="information-page">
       <Link className="wordmark" href="/">
-        scrapper.
+        <BrandMark size={24} />
+        ThreadFinder.
       </Link>
       <h1>Privacy &amp; data</h1>
       <p>Here is how the current service handles your research.</p>
@@ -39,6 +41,17 @@ export default function Privacy() {
         free search, even after the results expire. Clearing browser data loses
         access to your saved research and does not delete server records.
       </p>
+      <h2>Website analytics</h2>
+      <p>
+        We use Vercel Web Analytics to measure visits and page views, including
+        referrers, approximate location, and device and browser types. These
+        statistics are aggregated and do not use analytics cookies. We do not
+        send your business description, research results, or feedback as
+        analytics events. Read{" "}
+        <a href="https://vercel.com/docs/analytics/privacy-policy">
+          how Vercel handles analytics data
+        </a>.
+      </p>
       <h2>Service providers and abuse prevention</h2>
       <p>
         Vercel hosts the website and Neon stores hosted research. We use a
@@ -52,7 +65,7 @@ export default function Privacy() {
       <h2>Public conversations</h2>
       <p>
         Results come from public Reddit discussions. Open the original thread to
-        check its current context. Scrapper does not post replies or contact
+        check its current context. ThreadFinder does not post replies or contact
         anyone for you. If you participate, disclose your affiliation and follow
         the community’s rules.
       </p>

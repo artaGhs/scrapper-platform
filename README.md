@@ -1,4 +1,4 @@
-# Scrapper platform
+# ThreadFinder
 
 The Reddit MVP uses GPT-5.4 Mini with medium reasoning and web search. It infers searches from the business description, including indirect problem accounts, workarounds and consequences across communities. Returned links must occur in tool sources; comment matches require specific comment permalinks. It does not apply the legacy keyword prefilter. Exact generated dates are suppressed because the baseline source audit found unsupported dates. Matches are relevance assessments, not confirmed buying intent; review the original linked discussion before responding.
 
@@ -6,7 +6,7 @@ The current OpenAI path targets seven to ten relevant posts or comments and show
 
 Describe a business, run a bounded search, and review conversations where someone asks for a relevant solution or discusses the problem you solve. Each match shows the original words and an explanation; you decide whether to participate manually and transparently.
 
-**[Open the deployed MVP](https://scrapper-platform-khaki.vercel.app)**
+The production URL is available in the linked Vercel project.
 
 **Implemented MVP, October 11, 2026.** Reddit-only public launch: one description, a bounded live scan, original text/URLs/dates, source-supported fit, request/problem labels, and persistent Save / Not relevant feedback. Fictional sample research is restricted to authenticated developer access. Vercel uses free Neon Postgres; local development can use SQLite. The hosted calorie-photo example retrieved ten real posts and three manually verified relevant conversations for $0.08; coverage varies by category.
 
@@ -41,7 +41,7 @@ Three explicitly authorized Reddit source attempts reported **$0.092 total charg
 
 **Useful hosted proof:** submitting the photo-calorie app through the production form retrieved ten real Reddit posts and retained three relevant conversations, whose original pages and source text were manually checked. They include an app request, a photo-estimation problem, and an older simpler-journaling replacement request. Dates/ages are explicit; none is claimed as a ready-to-buy customer. The first run cost $0.08. A second bounded hosted check retained two actual matches from ten returned posts and honestly showed partial source completion; it also cost $0.08. Total reported historical and release source charges are $0.272. [Evidence and original links](docs/validation.md).
 
-Live research is the default and open to anonymous visitors within shared capacity. Each anonymous browser identity gets one started free search. A durable allowance survives reloads and the 24-hour result expiry; the cookie renews for 30 days. Clearing cookies or changing browsers creates a new identity, so this is not one run per human. A confirmed rejection before provider startup releases the unused allowance/reservation; an uncertain start remains consumed to prevent duplicate charges. The free run retains at most three qualified results and does not collect a full report for blurred previews. Empty/partial runs may return fewer. Previously saved results can be restored for 24 hours. Larger research, payments, subscriptions and trials are future work; client entitlement claims are rejected. Fictional sample mode remains separate.
+Live research is the default and open to anonymous visitors within shared capacity. Each anonymous browser identity gets one started free search. A durable allowance survives reloads and the 24-hour result expiry; the cookie renews for 30 days. Clearing cookies or changing browsers creates a new identity, so this is not one run per human. A confirmed rejection before provider startup releases the unused allowance/reservation; an uncertain start remains consumed to prevent duplicate charges. The free run retains at most three qualified results and does not collect a full report for blurred previews. Empty/partial runs may return fewer. Previously saved results can be restored for 24 hours. When payments are enabled, verified customer accounts receive a seven-day trial with one full search; Starter includes ten searches for $10/month and Pro thirty for $24/month. The server verifies subscription access and blocks overage; client entitlement claims are rejected. Fictional sample mode remains separate.
 
 X is deferred from the public launch and rejected by the public scan-creation API. Its connector and historical tests remain in the repository. Its earlier free-demo check returned ten real posts, zero qualified matches, and cost $0.020; useful X discovery was not proven. Historical Reddit/X source charges before final hosted verification total $0.112. See [historical X validation](docs/x-validation.md).
 
@@ -55,7 +55,9 @@ npm run test:database
 npm run build
 ```
 
-`db/schema.sql` creates an isolated `scrapper` schema with owner-scoped state, transaction-protected creation and feedback, and atomic advancement leases. Vercel never falls back to ephemeral SQLite. Configure provider credentials as private environment variables; configure bounded public admission before enabling any live budget. No paid add-ons are needed for this MVP. `scripts/validate-public-limits.ts` checks durable anonymous throttles and atomic daily limits without any provider/model call.
+`db/schema.sql` creates an isolated `threadfinder` schema with owner-scoped state, transaction-protected creation and feedback, and atomic advancement leases. Vercel never falls back to ephemeral SQLite. Configure provider credentials as private environment variables; configure bounded public admission before enabling any live budget. No paid add-ons are needed for this MVP. `scripts/validate-public-limits.ts` checks durable anonymous throttles and atomic daily limits without any provider/model call.
+
+For an existing hosted installation, run `npm run db:setup` as part of releasing this version. It renames the existing research namespace and replaces its functions in one transaction, preserving stored research and limits. Browser sessions and cached search IDs migrate when visitors return. Hosted verification reads `HOSTED_APP_URL` from the private environment.
 
 ## Checks
 
@@ -74,9 +76,11 @@ Browser tests start the production build at http://127.0.0.1:3173 with live prov
 
 ## Research and deferred work
 
+ThreadFinder's AWS payment integration now includes verified account sign-in, a durable seven-day trial, $10 Starter and $24 Pro plans, hosted checkout and subscription management. Seller onboarding is complete. Plans remain unpublished and production payments disabled until explicit go-live confirmation. See [payment setup and verification](docs/aws-monetization.md).
+
 [Research](docs/research.md) records competitors, source limitations, customer hypotheses and proposed economics. [MVP plan](docs/mvp-plan.md) is the original implementation specification. Neither validates demand, source rights, or a subscription price.
 
-X, Instagram and TikTok are deferred from this Reddit-only release. YouTube is outside scope. Automatic outreach, scheduled monitoring, customer validation and checkout remain deferred. No Stripe or merchant account was created. Amazon Pay and AWS Marketplace SaaS billing are different options; the exact service required for hackathon AWS-track eligibility has not been confirmed. Vercel hosting is independent of that unresolved payment requirement.
+X, Instagram and TikTok are deferred from this Reddit-only release. YouTube is outside scope. Automatic outreach, scheduled monitoring and customer validation remain deferred. Live paid checkout is prepared but awaits publishing confirmation. AWS App Monetization billing is integrated; hackathon AWS-track eligibility has not been confirmed.
 
 ## Private developer mode
 

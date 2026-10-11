@@ -13,7 +13,8 @@ async function main() {
     process.argv.find((arg) => arg.startsWith("--case="))?.slice(7) || "food";
   if (!["food", "food-correction", "uptime"].includes(name))
     throw Error("Unknown validation case.");
-  const base = "https://scrapper-platform-khaki.vercel.app";
+  const base = process.env.HOSTED_APP_URL?.replace(/\/$/, "");
+  if (!base) throw Error("HOSTED_APP_URL is required.");
   const description =
     name === "uptime"
       ? "Our website uptime monitor sends a Slack alert when a site goes down, so small teams notice downtime quickly."
@@ -74,7 +75,7 @@ async function main() {
     } else {
       await page.goto(base);
       await page.evaluate(
-        (id) => localStorage.setItem("scrapper-scan", JSON.stringify({ id })),
+        (id) => localStorage.setItem("threadfinder-scan", JSON.stringify({ id })),
         ledger[name].scanId!,
       );
       await page.reload();
@@ -117,7 +118,7 @@ async function main() {
     }
     const cookies = await context.cookies();
     const owner = cookies.find(
-      (cookie) => cookie.name === "scrapper_session",
+      (cookie) => cookie.name === "threadfinder_session",
     )?.value;
     if (!owner || !process.env.DATABASE_URL)
       throw Error("Private billing inspection unavailable.");

@@ -32,3 +32,11 @@ data/raw/
 test-results/
 playwright-report/
 .vercel
+
+# Private beta registry credentials, skill links and telemetry
+.npmrc
+.monetize/
+.claude/skills/monetize
+.codex/skills/monetize
+.kiro/skills/monetize
+.pi/agent/skills/monetize

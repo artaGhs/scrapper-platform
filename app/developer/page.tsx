@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import BrandMark from "@/components/brand-mark";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 export default function DeveloperAccess() {
@@ -14,9 +15,10 @@ export default function DeveloperAccess() {
           <span className="stars" />
         </div>
         <header className="site-header">
-          <Link href="/" className="wordmark" aria-label="Scrapper home">
+          <Link href="/" className="wordmark" aria-label="ThreadFinder home">
+            <BrandMark size={24} />
             <span>
-              scrapper<span className="wordmark-period">.</span>
+              ThreadFinder<span className="wordmark-period">.</span>
             </span>
           </Link>
         </header>
