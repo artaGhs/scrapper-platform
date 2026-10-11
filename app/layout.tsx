@@ -7,9 +7,24 @@ const font = Host_Grotesk({
   variable: "--font-sans",
 });
 export const metadata: Metadata = {
+  metadataBase: new URL("https://scrapper-platform-khaki.vercel.app"),
   title: "Scrapper — find a conversation worth joining",
   description:
     "Find Reddit conversations about the problem your business solves. Review original posts and comments, save relevant matches, and decide where to join in.",
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "Scrapper",
+    title: "Scrapper — find a conversation worth joining",
+    description:
+      "Find Reddit conversations about the problem your business solves.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Scrapper — find a conversation worth joining",
+    description:
+      "Find Reddit conversations about the problem your business solves.",
+  },
 };
 export const viewport: Viewport = { themeColor: "#030a24" };
 export default function RootLayout({
