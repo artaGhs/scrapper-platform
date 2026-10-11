@@ -73,6 +73,7 @@ export interface Opportunity extends SourceItem {
   reviewMethod?: "Gemini assessment" | "Keyword rules";
 }
 export interface Scan {
+  developer?: boolean;
   free?: boolean;
   startAttempted?: boolean;
   id: string;
@@ -115,6 +116,7 @@ export type PublicScan = Pick<
   | "notice"
   | "error"
   | "free"
+  | "developer"
 > & {
   freeSearchUsed?: boolean;
   sourceRuns?: PublicSourceRun[];
@@ -134,7 +136,12 @@ export function publicScan(
     mode: scan.mode,
     stage: scan.stage,
     free: scan.free,
-    freeSearchUsed: scan.free ? !!scan.startAttempted : undefined,
+    developer: scan.developer,
+    freeSearchUsed: scan.developer
+      ? false
+      : scan.free
+        ? !!scan.startAttempted
+        : undefined,
     business: scan.business,
     modelReview: scan.modelReview,
     sources: selectedSources(scan.sources),

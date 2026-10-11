@@ -1108,3 +1108,12 @@ footer {
     display: none;
   }
 }
+
+.developer-key {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--canvas);
+  color: var(--ink);
+}

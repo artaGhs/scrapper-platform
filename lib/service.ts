@@ -80,7 +80,8 @@ export async function advance(
         run.error = current.error;
       }
     if (current.sourceRuns?.length) finishRetrieval(current);
-    if (current.free && !current.startAttempted) await db.releaseFree(current);
+    if (current.free && !current.developer && !current.startAttempted)
+      await db.releaseFree(current);
     await db.save(current);
     return current;
   }
@@ -145,7 +146,8 @@ export async function advance(
             "The source reached its time limit; this does not confirm an empty search.";
         }
       finishRetrieval(scan);
-      if (scan.free && !scan.startAttempted) await db.releaseFree(scan);
+      if (scan.free && !scan.developer && !scan.startAttempted)
+        await db.releaseFree(scan);
     } else
       switch (scan.stage) {
         case "interpreting": {
@@ -186,7 +188,10 @@ export async function advance(
             else
               try {
                 const provider = providerFor(run.source);
-                if (scan.free) await db.consumeFree(scan);
+                if (scan.developer) {
+                  scan.startAttempted = true;
+                  await db.save(scan, false);
+                } else if (scan.free) await db.consumeFree(scan);
                 const started = await provider.start(scan.business!);
                 run.runId = started.id;
                 run.datasetId = started.defaultDatasetId;
@@ -199,6 +204,7 @@ export async function advance(
               } catch (error) {
                 if (
                   scan.free &&
+                  !scan.developer &&
                   (!scan.startAttempted ||
                     (error instanceof AppError && error.noJobStarted))
                 )

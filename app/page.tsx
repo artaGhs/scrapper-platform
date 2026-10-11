@@ -210,6 +210,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
   const [ready, setReady] = useState(false);
+  const [developer, setDeveloper] = useState(false);
   const [freeSearchUsed, setFreeSearchUsed] = useState(false);
   const [freeScanId, setFreeScanId] = useState<string | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState(false);
@@ -222,7 +223,7 @@ export default function Home() {
 
   const remember = useCallback((next: PublicScan) => {
     setScan(next);
-    if (next.free) {
+    if (next.free && !next.developer) {
       setFreeSearchUsed(!!next.freeSearchUsed);
       setFreeScanId(next.id);
     }
@@ -239,11 +240,13 @@ export default function Home() {
     async function bootstrap() {
       try {
         const allowance = await request<{
+          developer?: boolean;
           freeSearchUsed: boolean;
           freeScanId: string | null;
         }>("/api/session");
         if (!active) return;
         setReady(true);
+        setDeveloper(!!allowance.developer);
         setFreeSearchUsed(allowance.freeSearchUsed);
         setFreeScanId(allowance.freeScanId);
         let cached: { id?: string } = {};
@@ -353,9 +356,11 @@ export default function Home() {
       );
       try {
         const allowance = await request<{
+          developer?: boolean;
           freeSearchUsed: boolean;
           freeScanId: string | null;
         }>("/api/session");
+        setDeveloper(!!allowance.developer);
         setFreeSearchUsed(allowance.freeSearchUsed);
         setFreeScanId(allowance.freeScanId);
       } catch {
@@ -563,9 +568,11 @@ export default function Home() {
                 <p>
                   {mode === "sample"
                     ? "Fictional examples. No live search or original post links."
-                    : freeSearchUsed
-                      ? "Your free search has been used. Full research is coming later."
-                      : "One free Reddit search. Up to three useful results."}
+                    : developer
+                      ? "Developer mode: repeated runs enabled. Each job remains cost-capped."
+                      : freeSearchUsed
+                        ? "Your free search has been used. Full research is coming later."
+                        : "One free Reddit search. Up to three useful results."}
                 </p>
                 <button
                   className="run-button"
@@ -573,13 +580,13 @@ export default function Home() {
                     busy ||
                     !ready ||
                     description.trim().length < 20 ||
-                    (mode === "live" && freeSearchUsed)
+                    (mode === "live" && freeSearchUsed && !developer)
                   }
                   type="submit"
                 >
                   {busy
                     ? "Working"
-                    : mode === "live" && freeSearchUsed
+                    : mode === "live" && freeSearchUsed && !developer
                       ? "Free search used"
                       : "Run research"}
                   {busy ? (
@@ -589,7 +596,23 @@ export default function Home() {
                   )}
                 </button>
               </div>
-              {freeSearchUsed &&
+              {developer && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={async () => {
+                    const response = await fetch("/api/developer", {
+                      method: "DELETE",
+                    });
+                    if (response.ok) window.location.reload();
+                    else setError("Could not leave developer mode. Try again.");
+                  }}
+                >
+                  Leave developer mode
+                </button>
+              )}
+              {!developer &&
+                freeSearchUsed &&
                 freeScanId &&
                 (!scan || scan.mode !== "live") && (
                   <button
@@ -864,22 +887,26 @@ export default function Home() {
                 {!scan.results.length && scan.stage !== "failed" && (
                   <div className="empty-state">
                     <h3>
-                      {scan.free
-                        ? "Your free search has been used."
-                        : "A little more detail can help."}
+                      {scan.developer
+                        ? "Try another developer search."
+                        : scan.free
+                          ? "Your free search has been used."
+                          : "A little more detail can help."}
                     </h3>
                     <p>
                       {scan.mode === "sample"
                         ? "This small fixture set covers food-photo tracking, Shopify discounts, and website uptime. An unrelated business can correctly return no examples."
-                        : scan.free
-                          ? scan.stage === "partial"
-                            ? "None of the returned posts passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. Full research is coming later."
-                            : `${scan.retrieved ?? 0} posts were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. Full research is coming later.`
-                          : scan.stage === "partial"
-                            ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
-                            : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
+                        : scan.developer
+                          ? `${scan.retrieved ?? 0} posts were returned; none passed the fit checks. You can refine your description and run another developer search.`
+                          : scan.free
+                            ? scan.stage === "partial"
+                              ? "None of the returned posts passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. Full research is coming later."
+                              : `${scan.retrieved ?? 0} posts were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. Full research is coming later.`
+                            : scan.stage === "partial"
+                              ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
+                              : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
                     </p>
-                    {!scan.free && (
+                    {(!scan.free || scan.developer) && (
                       <button onClick={reset}>
                         Refine the description <Arrow />
                       </button>

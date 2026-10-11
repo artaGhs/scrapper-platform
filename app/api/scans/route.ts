@@ -13,6 +13,7 @@ import {
 } from "@/lib/http";
 import { store } from "@/lib/store";
 import { publicScan, selectedSources } from "@/lib/types";
+import { developerSession } from "@/lib/developer";
 export const runtime = "nodejs";
 const schema = z
   .object({
@@ -38,7 +39,8 @@ export async function POST(request: NextRequest) {
     const owner = session(request) || newSession();
     const repository = await store();
     const ipHash = clientFingerprint(request);
-    await repository.throttle(ipHash);
+    const developer = developerSession(request);
+    if (!developer) await repository.throttle(ipHash);
     const sources = selectedSources(input.data.sources);
     const config = input.data.mode === "live" ? liveConfig(sources) : undefined;
     const scan = await repository.create(
@@ -50,9 +52,13 @@ export async function POST(request: NextRequest) {
       config?.hourlyBudget,
       sources,
       config
-        ? { ipHash, dailyBudget: config.dailyBudget, free: true }
-        : undefined,
+        ? { ipHash, dailyBudget: config.dailyBudget, free: true, developer }
+        : developer
+          ? { ipHash, dailyBudget: 0, developer: true }
+          : undefined,
     );
+    if (scan.developer && !developer)
+      throw new AppError("Enable developer mode to reuse this run key.", 403);
     return attachSession(json(publicScan(scan), 201), owner, request);
   } catch (error) {
     return failure(error);

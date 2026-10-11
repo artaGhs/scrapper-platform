@@ -117,14 +117,16 @@ export class ScanStore {
         .run(now - RETENTION_MS);
       const duplicate = this.db
         .prepare(
-          `SELECT body FROM scans WHERE owner=? AND (idem=? OR (description=? AND mode=? AND COALESCE(json_extract(body, '$.sources'), '["reddit"]')=? AND created>? AND NOT (stage='failed' AND COALESCE(json_extract(body,'$.free'),0)=1 AND COALESCE(json_extract(body,'$.startAttempted'),0)=0))) ORDER BY created DESC LIMIT 1`,
+          `SELECT body FROM scans WHERE owner=? AND (idem=? OR (?=0 AND description=? AND mode=? AND COALESCE(json_extract(body, '$.sources'), '["reddit"]')=? AND COALESCE(json_extract(body,'$.developer'),0)=? AND created>? AND NOT (stage='failed' AND COALESCE(json_extract(body,'$.free'),0)=1 AND COALESCE(json_extract(body,'$.startAttempted'),0)=0))) ORDER BY created DESC LIMIT 1`,
         )
         .get(
           owner,
           key,
+          admission?.developer ? 1 : 0,
           description,
           mode,
           JSON.stringify(sources),
+          admission?.developer ? 1 : 0,
           now - 120_000,
         );
       if (duplicate) {
@@ -145,23 +147,25 @@ export class ScanStore {
       }
       const active = this.db
         .prepare(
-          "SELECT COUNT(*) AS n FROM scans WHERE owner=? AND stage NOT IN ('complete','empty','partial','failed') AND created>?",
+          "SELECT COUNT(*) AS n FROM scans WHERE owner=? AND COALESCE(json_extract(body,'$.developer'),0)=0 AND stage NOT IN ('complete','empty','partial','failed') AND created>?",
         )
         .get(owner, now - 210_000);
       const recent = this.db
-        .prepare("SELECT COUNT(*) AS n FROM scans WHERE owner=? AND created>?")
+        .prepare(
+          "SELECT COUNT(*) AS n FROM scans WHERE owner=? AND COALESCE(json_extract(body,'$.developer'),0)=0 AND created>?",
+        )
         .get(owner, now - 3600_000);
-      if (Number(active?.n) > 0)
+      if (!admission?.developer && Number(active?.n) > 0)
         throw new AppError(
           "You already have a search in progress. Finish it before starting another.",
           429,
         );
-      if (Number(recent?.n) >= 20)
+      if (!admission?.developer && Number(recent?.n) >= 20)
         throw new AppError(
           "This session has reached its hourly search limit. Try again later.",
           429,
         );
-      if (mode === "live") {
+      if (mode === "live" && !admission?.developer) {
         if (admission?.free && this.allowance(owner).used)
           throw new AppError(
             "Your free search has already been used. Your saved results remain available for 24 hours; full research is coming later.",
@@ -171,7 +175,7 @@ export class ScanStore {
           Number(
             this.db
               .prepare(
-                "SELECT COUNT(*) AS n FROM scans WHERE mode='live' AND created>? AND (owner=? OR (? IS NOT NULL AND ip_hash=?))",
+                "SELECT COUNT(*) AS n FROM scans WHERE mode='live' AND COALESCE(json_extract(body,'$.developer'),0)=0 AND created>? AND (owner=? OR (? IS NOT NULL AND ip_hash=?))",
               )
               .get(
                 now - 3600_000,
@@ -187,7 +191,7 @@ export class ScanStore {
           );
         const spent = this.db
           .prepare(
-            "SELECT COALESCE(SUM(reserved),0) AS total FROM scans WHERE mode='live' AND created>?",
+            "SELECT COALESCE(SUM(reserved),0) AS total FROM scans WHERE mode='live' AND COALESCE(json_extract(body,'$.developer'),0)=0 AND created>?",
           )
           .get(now - 3600_000);
         if (Number(spent?.total) + reservedUsd > hourlyBudget + 1e-9)
@@ -197,7 +201,7 @@ export class ScanStore {
           );
         const daily = this.db
           .prepare(
-            "SELECT COALESCE(SUM(reserved),0) AS total FROM scans WHERE mode='live' AND created>?",
+            "SELECT COALESCE(SUM(reserved),0) AS total FROM scans WHERE mode='live' AND COALESCE(json_extract(body,'$.developer'),0)=0 AND created>?",
           )
           .get(now - RETENTION_MS);
         if (
@@ -243,6 +247,7 @@ export class ScanStore {
       }
       const scan: Scan = {
         free: admission?.free,
+        developer: admission?.developer,
         id: randomUUID(),
         owner,
         key,
@@ -272,7 +277,7 @@ export class ScanStore {
           JSON.stringify(scan),
           admission?.ipHash || null,
         );
-      if (scan.free)
+      if (scan.free && !scan.developer)
         this.db
           .prepare(
             "INSERT INTO free_usage(owner,scan_id,consumed) VALUES(?,?,0) ON CONFLICT(owner) DO UPDATE SET scan_id=excluded.scan_id,consumed=0",

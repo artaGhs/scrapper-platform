@@ -17,7 +17,7 @@ async function main() {
   };
   try {
     const sums =
-      await sql`SELECT coalesce(sum(reserved),0) AS reserved FROM scrapper.scans WHERE mode='live' AND created>${Date.now() - 86400_000}`;
+      await sql`SELECT coalesce(sum(reserved),0) AS reserved FROM scrapper.scans WHERE mode='live' AND NOT coalesce((body->>'developer')::boolean,false) AND created>${Date.now() - 86400_000}`;
     const dayBudget = Number(sums[0].reserved) + 0.002;
     const attempts = await Promise.allSettled(
       Array.from({ length: 8 }, (_, i) =>
@@ -157,6 +157,54 @@ async function main() {
       ).id,
       free.id,
     );
+    const allowanceBeforeDeveloper = await db.allowance(freeOwner);
+    const developerAdmission = {
+      ...freeAdmission,
+      developer: true,
+      dailyBudget: 0,
+    };
+    const developerIds = new Set<string>();
+    for (let i = 0; i < 25; i++) {
+      const developerScan = await db.create(
+        freeOwner,
+        randomUUID(),
+        description,
+        "live",
+        0.12,
+        0,
+        ["reddit"],
+        developerAdmission,
+      );
+      developerIds.add(developerScan.id);
+      assert.equal(developerScan.developer, true);
+      assert.equal(
+        (
+          await db.create(
+            freeOwner,
+            developerScan.key,
+            description,
+            "live",
+            0.12,
+            0,
+            ["reddit"],
+            developerAdmission,
+          )
+        ).id,
+        developerScan.id,
+      );
+    }
+    assert.equal(developerIds.size, 25);
+    assert.deepEqual(await db.allowance(freeOwner), allowanceBeforeDeveloper);
+    await db.create(
+      prefix + "after-developer",
+      randomUUID(),
+      description,
+      "live",
+      0.001,
+      10,
+      ["reddit"],
+      { ipHash: freeAdmission.ipHash, dailyBudget: 10 },
+    );
     await db.releaseFree(free);
     free.stage = "failed";
     await db.save(free);
@@ -179,7 +227,7 @@ async function main() {
     for (let i = 0; i < 30; i++) await db.throttle(prefix);
     await assert.rejects(db.throttle(prefix), /Wait one minute/);
     console.log(
-      "Neon public admission passed: atomic daily reservations, ten-search connection cap, durable one-free allowance, safe unused reservation release/retry, idempotency, ownership and request throttle. Zero provider/model calls.",
+      "Neon public admission passed: atomic daily reservations, ten-search connection cap, durable one-free allowance, safe unused reservation release/retry, idempotency, ownership, request throttle and 25 developer reservations bypassing quotas without altering consumed free usage or visitor capacity. Zero provider/model calls.",
     );
   } finally {
     await clean();

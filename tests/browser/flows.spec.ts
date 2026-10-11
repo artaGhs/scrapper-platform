@@ -407,3 +407,73 @@ test("empty free batch explains zero fit without a misleading retry or gap messa
   await expect(page.getByText("Search finished with gaps.")).toHaveCount(0);
   await expect(page.locator("article")).toHaveCount(0);
 });
+
+test("developer login enables repeat searches and leaving restores the public allowance", async ({
+  page,
+}) => {
+  let developer = false;
+  let creations = 0;
+  const scans = new Map<string, Record<string, unknown>>();
+  await page.route("**/api/developer", async (route) => {
+    developer = route.request().method() === "POST";
+    await route.fulfill({ json: { developer } });
+  });
+  await page.route("**/api/session", async (route) => {
+    await route.fulfill({
+      json: {
+        ready: true,
+        developer,
+        freeSearchUsed: !developer,
+        freeScanId: null,
+      },
+    });
+  });
+  await page.route("**/api/scans", async (route) => {
+    creations++;
+    const input = route.request().postDataJSON();
+    const id = randomUUID();
+    const scan = {
+      id,
+      description: input.description,
+      mode: "live",
+      stage: "empty",
+      free: true,
+      developer: true,
+      freeSearchUsed: false,
+      retrieved: 10,
+      results: [],
+      sourceRuns: [],
+    };
+    scans.set(id, scan);
+    await route.fulfill({ status: 201, json: scan });
+  });
+  await page.route("**/api/scans/*", async (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").pop()!;
+    const scan = scans.get(id);
+    await route.fulfill(
+      scan ? { json: scan } : { status: 404, json: { error: "Expired" } },
+    );
+  });
+  await page.goto("/developer");
+  await page
+    .getByLabel("Developer access key")
+    .fill("browser-test-key-" + "a".repeat(40));
+  await page.getByRole("button", { name: "Enable developer mode" }).click();
+  await expect(
+    page.getByText("Developer mode: repeated runs enabled.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Uptime monitor" }).click();
+  await page.getByRole("button", { name: "Run research", exact: true }).click();
+  await expect(page.getByText("Try another developer search.")).toBeVisible();
+  await page.getByRole("button", { name: "Start over", exact: true }).click();
+  await page.getByRole("button", { name: "Run research", exact: true }).click();
+  await expect(page.getByText("Try another developer search.")).toBeVisible();
+  expect(creations).toBe(2);
+  await page.getByRole("button", { name: "Leave developer mode" }).click();
+  await expect(
+    page.getByRole("button", { name: "Free search used", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Leave developer mode" }),
+  ).toHaveCount(0);
+});

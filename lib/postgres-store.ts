@@ -65,6 +65,7 @@ export class PostgresStore implements ScanRepository {
     const now = Date.now();
     const scan: Scan = {
       free: admission?.free,
+      developer: admission?.developer,
       id: randomUUID(),
       owner,
       key,

@@ -2,6 +2,7 @@ import { AppError } from "./config";
 import type { Mode, Scan, Source } from "./types";
 type MaybePromise<T> = T | Promise<T>;
 export interface Admission {
+  developer?: boolean;
   ipHash: string;
   dailyBudget: number;
   free?: boolean;

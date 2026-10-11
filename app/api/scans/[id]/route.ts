@@ -10,6 +10,7 @@ import {
 import { store } from "@/lib/store";
 import { advance } from "@/lib/service";
 import { publicScan } from "@/lib/types";
+import { developerSession } from "@/lib/developer";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 // POST advances state; polling GET must not cause side effects or provider spending.
@@ -22,7 +23,12 @@ export async function POST(
     const owner = session(request);
     if (!owner) throw new AppError("Search not found or expired.", 404);
     const repository = await store();
-    await repository.throttle(`advance:${clientFingerprint(request)}`, 90);
+    const developer = developerSession(request);
+    const existing = await repository.get((await params).id, owner);
+    if (existing?.developer && !developer)
+      throw new AppError("Enable developer mode to continue this search.", 403);
+    if (!developer)
+      await repository.throttle(`advance:${clientFingerprint(request)}`, 90);
     return json(
       publicScan(await advance((await params).id, owner, repository)),
     );
