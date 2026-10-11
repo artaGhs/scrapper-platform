@@ -544,10 +544,12 @@ export default function Home() {
             <button
               type="button"
               className="light-button"
-              onClick={() => focusComposer("sample")}
+              onClick={() =>
+                focusComposer(mode === "sample" ? "live" : "sample")
+              }
               disabled={busy}
             >
-              Try a sample
+              {mode === "sample" ? "Use live search" : "Try a sample"}
             </button>
           )}
         </header>
@@ -631,37 +633,6 @@ export default function Home() {
                 <Mark size={15} />
                 Reddit
               </span>
-              {developer && (
-                <fieldset className="mode-switch" disabled={busy}>
-                  <legend className="sr-only">Search mode</legend>
-                  <label>
-                    <input
-                      type="radio"
-                      name="mode"
-                      value="live"
-                      checked={mode === "live"}
-                      onChange={() => {
-                        setMode("live");
-                        runKey.current = null;
-                      }}
-                    />
-                    <span>Live search</span>
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="mode"
-                      value="sample"
-                      checked={mode === "sample"}
-                      onChange={() => {
-                        setMode("sample");
-                        runKey.current = null;
-                      }}
-                    />
-                    <span>Sample examples</span>
-                  </label>
-                </fieldset>
-              )}
               <button
                 className="run-button"
                 disabled={

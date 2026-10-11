@@ -186,7 +186,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
   page.on("pageerror", (error) => errors.push(error.message));
   await enableDeveloper(page.request);
   await page.goto("/");
-  await page.getByLabel("Sample examples", { exact: true }).check();
+  await page.getByRole("button", { name: "Try a sample", exact: true }).click();
   await page.getByRole("button", { name: "Food photo app" }).click();
   await expect(
     page.getByRole("button", { name: "Run research" }),
@@ -245,7 +245,7 @@ test("empty fixtures and public capacity errors remain truthful", async ({
 }) => {
   await enableDeveloper(page.request);
   await page.goto("/");
-  await page.getByLabel("Sample examples", { exact: true }).check();
+  await page.getByRole("button", { name: "Try a sample", exact: true }).click();
   await page
     .getByLabel("Tell us what your business does")
     .fill(
@@ -256,7 +256,9 @@ test("empty fixtures and public capacity errors remain truthful", async ({
     page.getByRole("heading", { name: "No suitable matches in this search." }),
   ).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "New search" }).click();
-  await page.getByLabel("Live search", { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Use live search", exact: true })
+    .click();
   // Simulate public capacity; never start a paid scan from the browser suite.
   await page.route("**/api/scans", async (route) => {
     const input = route.request().postDataJSON();
@@ -300,7 +302,7 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
   await expect(
     page.getByLabel("Tell us what your business does"),
   ).toBeFocused();
-  await page.getByLabel("Sample examples", { exact: true }).check();
+  await page.getByRole("button", { name: "Try a sample", exact: true }).click();
   await page.getByRole("button", { name: "Uptime monitor" }).click();
   await page.getByRole("button", { name: "Run research" }).click();
   await expect(
