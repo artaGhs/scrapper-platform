@@ -290,11 +290,11 @@ export class ScanStore {
       throw error;
     }
   }
-  claim(id: string, owner: string): boolean {
+  claim(id: string, owner: string, leaseMs = 60_000): boolean {
     return (
       this.db
         .prepare("UPDATE scans SET lease=? WHERE id=? AND owner=? AND lease=0")
-        .run(Date.now() + 60_000, id, owner).changes === 1
+        .run(Date.now() + leaseMs, id, owner).changes === 1
     );
   }
   expiredLease(id: string, owner: string): boolean {

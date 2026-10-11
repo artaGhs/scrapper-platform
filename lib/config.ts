@@ -26,7 +26,14 @@ export function liveConfig(sources: Source[] = ["reddit"]) {
   const budget = Number(process.env.LIVE_SCAN_BUDGET_USD || 0);
   const hourlyBudget = Number(process.env.LIVE_HOURLY_BUDGET_USD || 2);
   const dailyBudget = Number(process.env.LIVE_DAILY_BUDGET_USD || hourlyBudget);
-  if (!token)
+  if (
+    !token &&
+    !(
+      sources.length === 1 &&
+      sources[0] === "reddit" &&
+      process.env.OPENAI_API_KEY?.trim()
+    )
+  )
     throw new AppError(
       "Reddit search is temporarily unavailable. Please try again later. Your free search has not been used.",
       503,
@@ -47,7 +54,7 @@ export function liveConfig(sources: Source[] = ["reddit"]) {
       503,
     );
   }
-  return { token, budget, hourlyBudget, dailyBudget };
+  return { token: token || "", budget, hourlyBudget, dailyBudget };
 }
 
 export function xMonthlyRunLimit(): number {

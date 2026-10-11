@@ -1,5 +1,9 @@
 # Scrapper platform
 
+The Reddit MVP uses GPT-5.4 Mini with medium reasoning and web search. It infers searches from the business description, including indirect problem accounts, workarounds and consequences across communities. Returned links must occur in tool sources; comment matches require specific comment permalinks. It does not apply the legacy keyword prefilter. Exact generated dates are suppressed because the baseline source audit found unsupported dates. Matches are relevance assessments, not confirmed buying intent; review the original linked discussion before responding.
+
+The current OpenAI path targets seven to ten relevant posts or comments and shows three in the free preview, with remaining record contents withheld server-side; authenticated developer mode shows up to ten; insufficient evidence can yield fewer. Two independent discovery passes run in parallel, one emphasizing indirect problems and one requests and alternatives. Each request is bounded to three search tool actions and 8,000 output tokens, with a 110-second request timeout and no automatic retries or paid scraper fallback. Latency and match count vary; the output limit includes reasoning tokens. Usage costs are calculated estimates, not provider invoices or hard dollar caps. Existing durable Apify scans keep their existing jobs. Historical implementation and validation details follow.
+
 Describe a business, run a bounded search, and review conversations where someone asks for a relevant solution or discusses the problem you solve. Each match shows the original words and an explanation; you decide whether to participate manually and transparently.
 
 **[Open the deployed MVP](https://scrapper-platform-khaki.vercel.app)**

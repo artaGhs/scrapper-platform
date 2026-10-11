@@ -73,9 +73,10 @@ export interface Opportunity extends SourceItem {
   score: number;
   saved: boolean;
   irrelevant: boolean;
-  reviewMethod?: "Gemini assessment" | "Keyword rules";
+  reviewMethod?: "Gemini assessment" | "OpenAI assessment" | "Keyword rules";
 }
 export interface Scan {
+  discoveryEngine?: "openai";
   developer?: boolean;
   free?: boolean;
   startAttempted?: boolean;
@@ -92,7 +93,8 @@ export interface Scan {
   sourceCursor?: number;
   xMonthlyRunLimit?: number;
   reviewComplete?: boolean;
-  modelReview?: "Gemini + keyword rules" | "Keyword rules";
+  modelReview?:
+    "Gemini + keyword rules" | "OpenAI assessment" | "Keyword rules";
   business?: Business;
   runId?: string;
   datasetId?: string;
@@ -169,11 +171,23 @@ export function publicScan(
         queryPlans,
       }),
     ),
-    results: scan.results.slice(0, 3),
-    matchCount: scan.free
-      ? Math.min(3, scan.results.length)
-      : scan.results.length,
-    lockedCount: scan.free ? 0 : Math.max(0, scan.results.length - 3),
+    results: scan.results.slice(
+      0,
+      scan.developer && scan.modelReview === "OpenAI assessment" ? 10 : 3,
+    ),
+    matchCount:
+      scan.modelReview === "OpenAI assessment"
+        ? scan.results.length
+        : scan.free
+          ? Math.min(3, scan.results.length)
+          : scan.results.length,
+    lockedCount: scan.developer
+      ? 0
+      : scan.modelReview === "OpenAI assessment"
+        ? Math.max(0, scan.results.length - 3)
+        : scan.free
+          ? 0
+          : Math.max(0, scan.results.length - 3),
     retrieved: scan.retrieved,
     notice: scan.notice,
     error: scan.error,

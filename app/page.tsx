@@ -124,7 +124,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(url, {
       ...init,
-      signal: init?.signal ?? AbortSignal.timeout(35_000),
+      signal: init?.signal ?? AbortSignal.timeout(130_000),
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
   } catch {
@@ -926,13 +926,14 @@ export default function Home() {
                       )),
                     )}
                     <p>
-                      Reddit post searches use the past year; returned dated
-                      records older than a year are excluded. Product keywords
-                      and problem wording find candidates, then context and fit
-                      checks qualify them.
-                      {scan.modelReview === "Gemini + keyword rules"
-                        ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
-                        : " Keyword rules check the returned context."}{" "}
+                      Searches explore product needs, concrete problems and
+                      workarounds across Reddit. Coverage and recency depend on
+                      publicly indexed sources.
+                      {scan.modelReview === "OpenAI assessment"
+                        ? " AI assesses the reported problem against the capabilities in your description."
+                        : scan.modelReview === "Gemini + keyword rules"
+                          ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
+                          : " Keyword rules check the returned context."}{" "}
                       Dates show the age of each discussion. A match does not
                       prove purchase intent.
                     </p>
@@ -1015,6 +1016,37 @@ export default function Home() {
                     />
                   ))}
                 </div>
+                {!!scan.lockedCount && (
+                  <section
+                    className="empty-state"
+                    aria-label="Additional collected matches"
+                  >
+                    <h3>
+                      {scan.lockedCount} more{" "}
+                      {scan.lockedCount === 1
+                        ? "conversation"
+                        : "conversations"}{" "}
+                      in this search.
+                    </h3>
+                    <div className="locked-previews" aria-hidden="true">
+                      {Array.from(
+                        { length: Math.min(3, scan.lockedCount) },
+                        (_, index) => (
+                          <div className="locked-preview" key={index}>
+                            <span />
+                            <span />
+                            <span />
+                          </div>
+                        ),
+                      )}
+                    </div>
+                    <p>
+                      Your free preview includes three matches. Subscription
+                      access will unlock the rest of the collected list.
+                    </p>
+                    <p>Subscriptions are coming soon.</p>
+                  </section>
+                )}
                 {scan.results.length > 0 && !visibleResults.length && (
                   <div className="empty-state">
                     <h3>Your shortlist starts here.</h3>

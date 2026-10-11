@@ -736,3 +736,55 @@ test("Reddit-wide scope and direct comment originals are visible in live results
     "My website goes down",
   );
 });
+
+test("free OpenAI preview shows three records and the actual hidden count", async ({
+  page,
+}) => {
+  await page.route("**/api/session", (route) =>
+    route.fulfill({ json: { ready: true, freeSearchUsed: false } }),
+  );
+  await page.route("**/api/scans", (route) =>
+    route.fulfill({
+      status: 201,
+      json: {
+        id: "openai-preview",
+        description: "Our app estimates calories from food photos.",
+        mode: "live",
+        stage: "complete",
+        free: true,
+        freeSearchUsed: true,
+        matchCount: 10,
+        lockedCount: 7,
+        modelReview: "OpenAI assessment",
+        sources: ["reddit"],
+        results: Array.from({ length: 3 }, (_, i) => ({
+          id: `match-${i}`,
+          source: "reddit",
+          kind: "post",
+          title: `Visible problem ${i + 1}`,
+          text: "I keep losing track of what I eat.",
+          evidence: "I keep losing track of what I eat.",
+          reason: "Photo logging may reduce manual work.",
+          need: "Problem context",
+          url: `https://www.reddit.com/r/test/comments/abc${i}/problem/`,
+          community: "r/test",
+          publishedAt: null,
+          synthetic: false,
+          score: 80,
+          saved: false,
+          irrelevant: false,
+        })),
+      },
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Food photo app" }).click();
+  await page.getByRole("button", { name: "Run research" }).click();
+  await expect(page.locator("article")).toHaveCount(3);
+  await expect(
+    page.getByRole("heading", { name: "7 more conversations in this search." }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Subscriptions are coming soon.", { exact: true }),
+  ).toBeVisible();
+});

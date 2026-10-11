@@ -12,7 +12,7 @@ import { advance } from "@/lib/service";
 import { publicScan } from "@/lib/types";
 import { developerSession } from "@/lib/developer";
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 180;
 // POST advances state; polling GET must not cause side effects or provider spending.
 export async function POST(
   request: NextRequest,

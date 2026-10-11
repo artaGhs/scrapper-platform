@@ -27,7 +27,7 @@ export interface ScanRepository {
     sources?: Source[],
     admission?: Admission,
   ): MaybePromise<Scan>;
-  claim(id: string, owner: string): MaybePromise<boolean>;
+  claim(id: string, owner: string, leaseMs?: number): MaybePromise<boolean>;
   expiredLease(id: string, owner: string): MaybePromise<boolean>;
   save(scan: Scan, release?: boolean): MaybePromise<void>;
   feedback(

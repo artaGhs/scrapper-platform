@@ -10,6 +10,7 @@ import { assessCandidates } from "./model-review";
 import { draftQueries } from "./model";
 import { RedditProvider } from "./provider";
 import { XProvider, xSearchQuery } from "./x-provider";
+import { discoverReddit } from "./openai-discovery";
 import { sampleItems } from "./samples";
 import { type ScanRepository, store } from "./store";
 import {
@@ -85,7 +86,14 @@ export async function advance(
     await db.save(current);
     return current;
   }
-  if (!(await db.claim(id, owner))) return current;
+  if (
+    !(await db.claim(
+      id,
+      owner,
+      current.discoveryEngine === "openai" ? 150_000 : 60_000,
+    ))
+  )
+    return current;
   const scan = (await db.get(id, owner))!;
   scan.sources = selectedSources(scan.sources);
   // Old durable Reddit scans retain their existing job; upgrading never creates a replacement job.
@@ -152,6 +160,18 @@ export async function advance(
       switch (scan.stage) {
         case "interpreting": {
           scan.business = interpret(scan.description);
+          if (
+            scan.mode === "live" &&
+            !injectedProvider &&
+            process.env.OPENAI_API_KEY?.trim() &&
+            scan.sources.length === 1 &&
+            scan.sources[0] === "reddit"
+          ) {
+            scan.discoveryEngine = "openai";
+            scan.business.queries = [];
+            scan.stage = "preparing";
+            break;
+          }
           // Production Reddit searches require a model-generated plan. Injected
           // provider-only fixtures remain offline; explicit draft injections test
           // this stage without an external model call.
@@ -191,6 +211,48 @@ export async function advance(
           break;
         }
         case "preparing": {
+          if (scan.discoveryEngine === "openai") {
+            if (scan.startAttempted)
+              throw new AppError(
+                "This search was interrupted and will not restart automatically.",
+                502,
+              );
+            const key = process.env.OPENAI_API_KEY?.trim();
+            if (!key)
+              throw new AppError(
+                "Search is temporarily unavailable. Your free search has not been used.",
+                503,
+                true,
+              );
+            if (scan.free && !scan.developer) await db.consumeFree(scan);
+            scan.startAttempted = true;
+            await db.save(scan, false);
+            const found = await discoverReddit(scan.description, key);
+            scan.business!.summary = found.summary;
+            scan.results = found.results.slice(0, 10);
+            scan.retrieved = found.retrieved;
+            // OpenAI exposes usage; this is a calculated cost, not an invoice.
+            scan.actualUsd = found.estimatedUsd;
+            scan.partial = found.partial;
+            scan.sourceRuns[0] = {
+              source: "reddit",
+              status: found.partial ? "partial" : "complete",
+              retrieved: found.retrieved,
+              normalized: found.results.length,
+              actualUsd: found.estimatedUsd,
+              searchKinds: ["post", "comment"],
+            };
+            scan.modelReview = "OpenAI assessment";
+            scan.reviewComplete = true;
+            scan.notice =
+              (found.partial
+                ? "One search pass could not finish. These matches come from the completed pass. "
+                : "") +
+              "Search covers publicly indexed discussions and may miss posts or comments. Review the linked conversation before responding.";
+            scan.stage = "ranking";
+            break;
+          }
+
           const run = scan.sourceRuns.find((run) => run.status === "queued");
           if (run) {
             if (scan.mode === "sample") run.status = "searching";
@@ -350,7 +412,7 @@ export async function advance(
             }
           }
           scan.reviewComplete = true;
-          if (scan.free)
+          if (scan.free && scan.discoveryEngine !== "openai")
             scan.results = scan.results.slice(0, FREE_RESULT_LIMIT);
           scan.stage = "ranking";
           break;
@@ -358,7 +420,7 @@ export async function advance(
         case "ranking":
           if (!scan.reviewComplete)
             scan.results = rank(scan.items || [], scan.business!);
-          if (scan.free)
+          if (scan.free && scan.discoveryEngine !== "openai")
             scan.results = scan.results.slice(0, FREE_RESULT_LIMIT);
           scan.items = undefined;
           scan.stage = scan.partial
@@ -371,12 +433,18 @@ export async function advance(
   } catch (error) {
     scan.stage = "failed";
     scan.error = sourceError(error);
+    if (scan.discoveryEngine === "openai") {
+      for (const run of scan.sourceRuns) {
+        run.status = "failed";
+        run.error = scan.error;
+      }
+    }
     // Query preparation fails before source startup: release the reservation
     // and leave the visitor's free allowance available, with no template fallback.
     if (
       error instanceof AppError &&
       error.noJobStarted &&
-      !scan.startAttempted
+      (!scan.startAttempted || scan.discoveryEngine === "openai")
     ) {
       if (scan.free && !scan.developer) await db.releaseFree(scan);
       for (const run of scan.sourceRuns) {

@@ -50,7 +50,12 @@ export async function POST(request: NextRequest) {
       input.data.key,
       input.data.description,
       input.data.mode,
-      config ? Math.min(config.budget, FREE_SOURCE_BUDGET_USD) : 0,
+      config
+        ? Math.min(
+            config.budget,
+            process.env.OPENAI_API_KEY?.trim() ? 0.25 : FREE_SOURCE_BUDGET_USD,
+          )
+        : 0,
       config?.hourlyBudget,
       sources,
       config

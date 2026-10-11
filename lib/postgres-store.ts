@@ -91,9 +91,9 @@ export class PostgresStore implements ScanRepository {
       throw new AppError(result.error, result.status || 400);
     return result as Scan;
   }
-  async claim(id: string, owner: string) {
+  async claim(id: string, owner: string, leaseMs = 60_000) {
     const rows = await this
-      .sql`UPDATE scrapper.scans SET lease=${Date.now() + 60_000} WHERE id=${id} AND owner=${owner} AND lease=0 RETURNING id`;
+      .sql`UPDATE scrapper.scans SET lease=${Date.now() + leaseMs} WHERE id=${id} AND owner=${owner} AND lease=0 RETURNING id`;
     return rows.length === 1;
   }
   async expiredLease(id: string, owner: string) {
