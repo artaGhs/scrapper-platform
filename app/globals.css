@@ -258,7 +258,12 @@ main {
   height: calc(var(--rim) * 0.8);
   opacity: 0.7;
   filter: blur(2px);
-  mask-image: linear-gradient(transparent 6%, #000 30%, #000 45%, transparent 80%);
+  mask-image: linear-gradient(
+    transparent 6%,
+    #000 30%,
+    #000 45%,
+    transparent 80%
+  );
   background:
     linear-gradient(90deg, transparent, rgba(120, 160, 255, 0.55), transparent)
       24% 8% / 5px 40% no-repeat,
@@ -368,7 +373,7 @@ main {
 }
 h1 {
   margin: 34px 0 0;
-  font-size: clamp(2.6rem, 6.2vw, 5.6rem);
+  font-size: clamp(2.6rem, min(6.2vw, 10.5svh), 5.6rem);
   font-weight: 500;
   line-height: 1.02;
   letter-spacing: -0.035em;
@@ -597,7 +602,7 @@ button.chip:disabled {
 }
 .community-strip {
   margin-top: auto;
-  padding: 56px 0 40px;
+  padding: 28px 0 40px;
 }
 .community-strip p {
   margin: 0;
@@ -655,6 +660,7 @@ button.chip:disabled {
 .is-docked .composer {
   width: min(840px, 100%);
   margin-top: 4px;
+  background: rgba(238, 243, 255, 0.97);
 }
 .is-docked .composer-note {
   margin-top: 10px;
@@ -846,7 +852,25 @@ main > .error-message {
   padding: 11px 16px;
   border-radius: 14px;
   font-weight: 500;
+  list-style: none;
   cursor: pointer;
+}
+.strategy summary::-webkit-details-marker {
+  display: none;
+}
+.strategy summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin: -3px 4px 0 auto;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.18s var(--ease);
+}
+.strategy[open] summary::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
 }
 .strategy summary span {
   color: var(--muted);
@@ -1095,7 +1119,7 @@ h2 {
   font-size: 13.5px;
   font-weight: 500;
 }
-.feedback-actions button:hover:not(:disabled) {
+.feedback-actions button:hover:not([aria-disabled="true"]) {
   background: var(--frost);
 }
 .feedback-actions button[aria-pressed="true"] {
@@ -1103,8 +1127,8 @@ h2 {
   background: rgba(36, 87, 245, 0.08);
   color: var(--signal);
 }
-.feedback-actions button:disabled {
-  opacity: 0.6;
+.feedback-actions button[aria-disabled="true"] {
+  cursor: progress;
 }
 .result.is-fictional {
   border: 1px dashed var(--fictional);
@@ -1114,8 +1138,12 @@ h2 {
   background: transparent;
 }
 .result.is-dismissed {
-  opacity: 0.62;
+  background: var(--frost);
   box-shadow: none;
+}
+.is-dismissed h3,
+.is-dismissed .result-meta {
+  color: var(--muted);
 }
 .is-dismissed blockquote,
 .is-dismissed .fit {
@@ -1475,7 +1503,11 @@ h2 {
     gap: 6px 24px;
   }
   .community-strip li {
+    color: var(--muted);
     font-size: 1.1rem;
+  }
+  .rail-mode {
+    display: none;
   }
   .progress-rail {
     flex-wrap: wrap;
@@ -1554,11 +1586,38 @@ h2 {
   }
 }
 
+.access {
+  justify-content: flex-start;
+  padding-bottom: 96px;
+}
+.access .hero-copy {
+  margin-top: clamp(40px, 10vh, 96px);
+}
+.access h1 {
+  margin-top: 20px;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+}
+.access .composer {
+  width: min(560px, 100%);
+}
+.access .composer-toolbar {
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.access .error-message {
+  margin: 12px 0 0;
+}
 .developer-key {
+  display: block;
   width: 100%;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--canvas);
+  height: 46px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(11, 22, 64, 0.14);
+  border-radius: 12px;
+  background: var(--paper);
   color: var(--ink);
+}
+.developer-key:focus-visible {
+  outline-offset: 1px;
 }

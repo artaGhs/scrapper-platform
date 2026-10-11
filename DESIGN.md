@@ -10,6 +10,7 @@ colors:
   signal-press: "#1a46db"
   ice: "#dce8ff"
   frost: "#eef3ff"
+  page: "#f5f8ff"
   paper: "#ffffff"
   ink: "#0b1640"
   muted: "#4a5a85"
@@ -17,6 +18,7 @@ colors:
   on-night: "#ffffff"
   on-night-muted: "#b8c6f2"
   strip: "#6e86c6"
+  fictional: "#8aa2dd"
   error: "#c42b3c"
 typography:
   display:
@@ -82,14 +84,14 @@ components:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
     rounded: "{rounded.chip}"
-    padding: "0 18px"
-    height: "38px"
+    padding: "0 16px"
+    height: "36px"
   chip:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
     rounded: "{rounded.chip}"
     padding: "0 12px"
-    height: "32px"
+    height: "30px"
   result-card:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
@@ -124,10 +126,12 @@ One saturated blue family carries the whole world; everything else is ink, ice a
 ### Neutral
 - **Night** (#030a24) / **Night Deep** (#061445) / **Horizon Blue** (#0a2380): the dome, the docked bar, the footer band.
 - **Ice** (#dce8ff) / **Frost** (#eef3ff): the daylight below the rim, quote grounds, chip fills.
-- **Paper** (#ffffff): result cards and the workspace page.
+- **Page** (#f5f8ff): the workspace and landing-section background below the horizon.
+- **Paper** (#ffffff): result cards, the example card, details panels.
+- **Fictional** (#8aa2dd): dashed outlines on fictional examples and the sample disclosure.
 - **Ink** (#0b1640): text on light. **Muted** (#4a5a85): secondary text on light (≥5.5:1 on ice).
 - **On-night Muted** (#b8c6f2): secondary text on the dome.
-- **Strip** (#6e86c6): the large faded community strip only (≥3:1, large text).
+- **Strip** (#6e86c6): the faded community strip on desktop only (≥3:1 at its ≥20px/600 size); on phones the strip uses Muted.
 - **Error** (#c42b3c): errors only.
 
 ### Named Rules
@@ -152,7 +156,7 @@ One saturated blue family carries the whole world; everything else is ink, ice a
 
 ## Layout
 
-Centered composition. The hero is at least one viewport tall (capped at 940px) with content on a single centered column: beta pill, two-line headline, subcopy, then a 720px composer straddling the rim. Landing sections use a 1120px container with 40px side margins (20px on mobile). The results workspace narrows to an 840px reading column. Sections are separated by 120px (72px mobile). After Run, the hero collapses into a sticky docked bar on wide screens; on narrow screens it scrolls away.
+Centered composition. The hero is at least one viewport tall (capped at 980px) with content on a single centered column: beta pill, two-line headline, subcopy, then a 720px composer straddling the rim. Landing sections use a 1120px container with 40px side margins (20px on mobile). The results workspace narrows to an 840px reading column. Sections are separated by 120px (72px mobile). After Run, the hero collapses into a docked night bar: sticky (its header row scrolls away) when the viewport is at least 900px wide and 720px tall; otherwise it scrolls away with the page.
 
 ## Elevation & Depth
 
@@ -177,14 +181,14 @@ Fully rounded pills for chips and buttons (999px), 12px for inputs, 20px for car
 - **Ghost:** transparent with ink text and a 1px line border (Save, Not relevant, Start over).
 
 ### Chips
-- **Style:** 32px white-on-frost pills with 1px rgba(11,22,64,.08) border, 13px/500 ink.
+- **Style:** 30px white-on-frost pills with 1px rgba(11,22,64,.08) border, 13px/500 ink.
 - **Segmented mode switch:** two radio chips inside a frost track; the checked one is white with the card shadow.
 
 ### Composer (signature)
-Frosted panel (rgba(238,243,255,.78), 20px backdrop blur, 1px white border, 24px radius, Composer shadow). Visible small label, borderless textarea, example chips with counter, hairline, then toolbar: Reddit source chip, mode switch, and Run research on the right.
+Frosted panel (rgba(236,242,255,.86), 22px backdrop blur with 1.5 saturate, 1px white border, 24px radius, Composer shadow); docked it rises to rgba(238,243,255,.97) so text keeps contrast over night. Visible small label, borderless textarea, example chips with counter, hairline, then toolbar: Reddit source chip, mode switch, and Run research on the right.
 
 ### Result Card
-White, 20px radius, Card shadow, 1px line border. Signal numeral, metadata row, title, quote on Frost, fit label pill + reason, hairline, actions (Open original primary; Save / Not relevant ghost). Fictional cards use a dashed #9fb3e6 border. Not-relevant cards collapse to title + Undo at 60% opacity.
+White, 20px radius, Card shadow, 1px line border. Signal numeral, metadata row, title, quote on Frost, fit label pill + reason, hairline, actions (Open original primary; Save / Not relevant ghost). Fictional cards use a dashed Fictional (#8aa2dd) border. Not-relevant cards collapse to metadata, title and actions on Frost, with muted title and metadata; actions keep full contrast.
 
 ### Horizon Rail
 1px line with three round nodes: done = filled Signal with check, active = Signal ring with a soft pulse (the only looping motion in the workspace), pending = hollow line.

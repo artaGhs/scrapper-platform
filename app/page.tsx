@@ -186,7 +186,9 @@ function Result({
       <div className="fit">
         <span className="fit-label">
           {item.need}
-          {!item.synthetic && item.reviewMethod ? ` · ${item.reviewMethod}` : ""}
+          {!item.synthetic && item.reviewMethod
+            ? ` · ${item.reviewMethod}`
+            : ""}
         </span>
         <p>{item.reason}</p>
       </div>
@@ -209,7 +211,7 @@ function Result({
           <div className="feedback-actions">
             <button
               aria-pressed={item.saved}
-              disabled={pending}
+              aria-disabled={pending}
               onClick={() => onFeedback(item, "save")}
             >
               <svg
@@ -227,7 +229,7 @@ function Result({
             </button>
             <button
               aria-pressed={item.irrelevant}
-              disabled={pending}
+              aria-disabled={pending}
               onClick={() => onFeedback(item, "irrelevant")}
             >
               {item.irrelevant ? "Undo feedback" : "Not relevant"}
@@ -335,9 +337,7 @@ export default function Home() {
         });
         if (stopped) return;
         remember(next);
-        if (terminalStages.includes(next.stage)) {
-          setTimeout(() => resultsHeading.current?.focus(), 0);
-        } else
+        if (!terminalStages.includes(next.stage))
           timer = setTimeout(
             poll,
             next.mode === "live" && next.stage === "searching" ? 2500 : 650,
@@ -381,7 +381,6 @@ export default function Home() {
       // A transition lets the composer morph into its docked position.
       startTransition(() => remember(next));
       window.scrollTo({ top: 0 });
-      if (terminalStages.includes(next.stage)) resultsHeading.current?.focus();
     } catch (issue) {
       setError(
         issue instanceof Error ? issue.message : "Could not start this search.",
@@ -469,6 +468,10 @@ export default function Home() {
     scan?.results.filter((item) => filter === "all" || item.saved) || [];
   const finished = !!scan && terminalStages.includes(scan.stage);
   const currentStep = scan ? stageIndex[scan.stage] : -1;
+  // Run and the textarea disable while working, so hand focus to the outcome once it renders.
+  useEffect(() => {
+    if (finished) resultsHeading.current?.focus();
+  }, [finished]);
   const status =
     scan?.stage === "interpreting"
       ? "Reading your description"
@@ -533,7 +536,9 @@ export default function Home() {
                 <span className="beta-badge">Beta</span>
                 <span>
                   One free Reddit search
-                  <span className="pill-more">, up to three useful results</span>
+                  <span className="pill-more">
+                    , up to three useful results
+                  </span>
                 </span>
                 <Arrow />
               </button>
@@ -544,8 +549,8 @@ export default function Home() {
               </h1>
               <p className="hero-sub">
                 Find Reddit conversations about the problem your business
-                solves. Describe it, review the original words, and decide
-                where to join in.
+                solves. Describe it, review the original words, and decide where
+                to join in.
               </p>
             </div>
           </ViewTransition>
@@ -554,7 +559,9 @@ export default function Home() {
         <ViewTransition name="composer">
           <form className="composer" onSubmit={run}>
             <div className="composer-head">
-              <label htmlFor="description">Tell us what your business does</label>
+              <label htmlFor="description">
+                Tell us what your business does
+              </label>
               <span id="description-hint">
                 <span className="hint-text">
                   A specific problem makes a better search ·{" "}
@@ -675,14 +682,14 @@ export default function Home() {
             freeSearchUsed &&
             freeScanId &&
             (!scan || scan.mode !== "live") && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => void restoreFreeResults()}
-            >
-              View your free results <Arrow />
-            </button>
-          )}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void restoreFreeResults()}
+              >
+                View your free results <Arrow />
+              </button>
+            )}
         </div>
 
         {!scan && (
@@ -859,9 +866,8 @@ export default function Home() {
                     )),
                   )}
                   <p>
-                    Reddit searches the past year. Category and problem
-                    phrases find candidates, then context and fit checks
-                    qualify them.
+                    Reddit searches the past year. Category and problem phrases
+                    find candidates, then context and fit checks qualify them.
                     {scan.modelReview === "Gemini + keyword rules"
                       ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
                       : " Keyword rules check the returned context."}{" "}
