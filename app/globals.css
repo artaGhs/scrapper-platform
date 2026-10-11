@@ -300,11 +300,14 @@ main {
   animation: twinkle 5s ease-in-out infinite alternate;
 }
 .site-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
   align-items: center;
   width: min(1200px, 100%);
-  height: var(--header-h);
+  min-height: var(--header-h);
+  padding-block: 12px;
 }
 .wordmark {
   display: inline-flex;
@@ -334,9 +337,52 @@ main {
   color: #fff;
   background: rgba(255, 255, 255, 0.06);
 }
-.site-header .light-button {
-  grid-column: 3;
-  justify-self: end;
+.account-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.account-nav > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.account-nav > a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.account-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--signal);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.account-link:hover {
+  background: var(--signal-press);
+}
+.account-nav .account-link {
+  background: var(--paper);
+  color: var(--ink);
+}
+.account-nav .account-link:hover {
+  background: var(--ice);
+}
+.composer-note .account-link {
+  margin-top: 12px;
 }
 .hero-copy {
   margin-top: clamp(28px, 6vh, 64px);
@@ -1614,6 +1660,9 @@ h2 {
   .pill-more,
   .source-chip {
     display: none;
+  }
+  .account-nav {
+    flex-basis: 100%;
   }
   .hero-copy {
     margin-top: 20px;
