@@ -39,6 +39,17 @@ export default function Privacy() {
         free search, even after the results expire. Clearing browser data loses
         access to your saved research and does not delete server records.
       </p>
+      <h2>Website analytics</h2>
+      <p>
+        We use Vercel Web Analytics to measure visits and page views, including
+        referrers, approximate location, and device and browser types. These
+        statistics are aggregated and do not use analytics cookies. We do not
+        send your business description, research results, or feedback as
+        analytics events. Read{" "}
+        <a href="https://vercel.com/docs/analytics/privacy-policy">
+          how Vercel handles analytics data
+        </a>.
+      </p>
       <h2>Service providers and abuse prevention</h2>
       <p>
         Vercel hosts the website and Neon stores hosted research. We use a
