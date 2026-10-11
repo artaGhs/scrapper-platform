@@ -13,16 +13,20 @@ CREATE INDEX IF NOT EXISTS scan_owner ON scrapper.scans(owner, created);
 -- statement
 REVOKE ALL ON scrapper.scans FROM PUBLIC;
 -- statement
+CREATE TABLE IF NOT EXISTS scrapper.source_usage (source text NOT NULL, month text NOT NULL, used integer NOT NULL, PRIMARY KEY(source,month));
+-- statement
+REVOKE ALL ON scrapper.source_usage FROM PUBLIC;
+-- statement
 CREATE OR REPLACE FUNCTION scrapper.create_scan(candidate jsonb, hourly_budget numeric) RETURNS jsonb
 LANGUAGE plpgsql SECURITY INVOKER SET search_path = pg_catalog AS $$
-DECLARE prior jsonb; stamp bigint := (candidate->>'createdAt')::bigint; own text := candidate->>'owner';
+DECLARE prior jsonb; stamp bigint := (candidate->>'createdAt')::bigint; own text := candidate->>'owner'; usage_month text := to_char(to_timestamp(stamp/1000.0) AT TIME ZONE 'UTC','YYYY-MM'); run_limit integer := coalesce((candidate->>'xMonthlyRunLimit')::integer,5);
 BEGIN
  PERFORM pg_advisory_xact_lock(839122,1);
  DELETE FROM scrapper.scans WHERE created < stamp-86400000;
  SELECT body INTO prior FROM scrapper.scans WHERE owner=own AND
- (idem=candidate->>'key' OR (description=candidate->>'description' AND mode=candidate->>'mode' AND created>stamp-120000)) ORDER BY created DESC LIMIT 1;
+ (idem=candidate->>'key' OR (description=candidate->>'description' AND mode=candidate->>'mode' AND coalesce(body->'sources','["reddit"]'::jsonb)=coalesce(candidate->'sources','["reddit"]'::jsonb) AND created>stamp-120000)) ORDER BY created DESC LIMIT 1;
  IF prior IS NOT NULL THEN
-  IF prior->>'key'=candidate->>'key' AND (prior->>'description'<>candidate->>'description' OR prior->>'mode'<>candidate->>'mode') THEN
+  IF prior->>'key'=candidate->>'key' AND (prior->>'description'<>candidate->>'description' OR prior->>'mode'<>candidate->>'mode' OR coalesce(prior->'sources','["reddit"]'::jsonb)<>coalesce(candidate->'sources','["reddit"]'::jsonb)) THEN
    RETURN jsonb_build_object('error','This run key belongs to another request. Start a new search.','status',409);
   END IF;
   RETURN prior;
@@ -35,6 +39,16 @@ BEGIN
  END IF;
  IF candidate->>'mode'='live' AND (SELECT coalesce(sum(reserved),0) FROM scrapper.scans WHERE mode='live' AND created>stamp-3600000)+(candidate->>'reservedUsd')::numeric>hourly_budget THEN
   RETURN jsonb_build_object('error','The server has reached its hourly live-search budget. No provider job was started.','status',429);
+ END IF;
+ IF candidate->>'mode'='live' AND candidate->'sources' ? 'x' AND EXISTS(SELECT 1 FROM scrapper.scans WHERE mode='live' AND stage NOT IN ('complete','empty','partial','failed') AND created>stamp-210000 AND body->'sources' ? 'x') THEN
+  RETURN jsonb_build_object('error','The X source already has a job in progress. Wait for it to finish before starting another.','status',429);
+ END IF;
+ IF candidate->>'mode'='live' AND candidate->'sources' ? 'x' THEN
+  IF run_limit < 1 OR run_limit > 1000 THEN RETURN jsonb_build_object('error','The X pilot run allowance is not configured correctly.','status',503); END IF;
+  IF coalesce((SELECT used FROM scrapper.source_usage WHERE source='x' AND month=usage_month),0)>=run_limit THEN
+   RETURN jsonb_build_object('error','The X pilot has reached its monthly run allowance. Reddit and sample mode remain available.','status',429);
+  END IF;
+  INSERT INTO scrapper.source_usage(source,month,used) VALUES('x',usage_month,1) ON CONFLICT(source,month) DO UPDATE SET used=scrapper.source_usage.used+1;
  END IF;
  INSERT INTO scrapper.scans(id,owner,idem,mode,description,stage,created,reserved,body)
  VALUES(candidate->>'id',own,candidate->>'key',candidate->>'mode',candidate->>'description',candidate->>'stage',stamp,(candidate->>'reservedUsd')::numeric,candidate);

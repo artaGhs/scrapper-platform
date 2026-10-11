@@ -75,4 +75,4 @@ Buttons have visible green focus outlines and distinct disabled states. The text
 - Do put sample disclosure beside actions and on every synthetic result.
 - Do retain text and controls when motion is unavailable.
 - Don't add claim metrics, invented posts or illustration-as-proof.
-- Don't make the progress rail imply percentages or multiple searched sources.
+- Don't make the progress rail imply percentages; identify each selected source's actual status separately.

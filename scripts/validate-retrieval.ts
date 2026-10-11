@@ -91,7 +91,8 @@ async function main() {
       totalSourceValidationUsd:
         typeof scan.actualUsd === "number" ? priorTotal + scan.actualUsd : null,
       returnedRecords: records.length,
-      discussionRecords: records.filter(isDiscussionRecord).length,
+      discussionRecords: records.filter((record) => isDiscussionRecord(record))
+        .length,
       normalizedRecords: accepted.length,
       qualifiedMatches: scan.results.length,
       error: scan.error ?? null,

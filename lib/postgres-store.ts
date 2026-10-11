@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { randomUUID } from "node:crypto";
-import { AppError, RETENTION_MS } from "./config";
-import type { Mode, Scan } from "./types";
+import { AppError, RETENTION_MS, xMonthlyRunLimit } from "./config";
+import type { Mode, Scan, Source } from "./types";
 import type { ScanRepository } from "./store";
 export class PostgresStore implements ScanRepository {
   private sql;
@@ -20,6 +20,7 @@ export class PostgresStore implements ScanRepository {
     mode: Mode,
     reservedUsd: number,
     hourlyBudget = 0,
+    sources: Source[] = ["reddit"],
   ): Promise<Scan> {
     const now = Date.now();
     const scan: Scan = {
@@ -33,6 +34,11 @@ export class PostgresStore implements ScanRepository {
       updatedAt: now,
       results: [],
       reservedUsd,
+      sources,
+      xMonthlyRunLimit:
+        mode === "live" && sources.includes("x")
+          ? xMonthlyRunLimit()
+          : undefined,
     };
     const rows = await this
       .sql`SELECT scrapper.create_scan(${JSON.stringify(scan)}::jsonb, ${hourlyBudget}::numeric) AS result`;

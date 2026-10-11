@@ -1,3 +1,4 @@
+import type { Source } from "./types";
 export const MAX_ITEMS = 50;
 export const MIN_PROVIDER_ITEMS = 10;
 export const MIN_PROVIDER_BUDGET_USD = 0.04;
@@ -12,7 +13,12 @@ export class AppError extends Error {
     super(message);
   }
 }
-export function liveConfig() {
+export function liveConfig(sources: Source[] = ["reddit"]) {
+  const minimum = sources.reduce(
+    (total, source) =>
+      total + (source === "reddit" ? MIN_PROVIDER_BUDGET_USD : 0.02),
+    0,
+  );
   const token = process.env.APIFY_TOKEN?.trim();
   const budget = Number(process.env.LIVE_SCAN_BUDGET_USD || 0);
   const hourlyBudget = Number(process.env.LIVE_HOURLY_BUDGET_USD || 2);
@@ -23,16 +29,26 @@ export function liveConfig() {
     );
   if (
     !Number.isFinite(budget) ||
-    budget < MIN_PROVIDER_BUDGET_USD ||
+    budget < minimum ||
     budget > 1 ||
     !Number.isFinite(hourlyBudget) ||
     hourlyBudget <= 0 ||
     hourlyBudget > 10
   ) {
     throw new AppError(
-      "Live search needs an explicit server budget: LIVE_SCAN_BUDGET_USD must be at least 0.04 and at most 1; LIVE_HOURLY_BUDGET_USD must be above 0 and at most 10. No provider job was started.",
+      `Live search needs an explicit server budget: LIVE_SCAN_BUDGET_USD must be at least ${minimum} for the selected sources and at most 1; LIVE_HOURLY_BUDGET_USD must be above 0 and at most 10. No provider job was started.`,
       503,
     );
   }
   return { token, budget, hourlyBudget };
+}
+
+export function xMonthlyRunLimit(): number {
+  const limit = Number(process.env.X_MONTHLY_RUN_LIMIT || 5);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 1000)
+    throw new AppError(
+      "The X pilot run allowance is not configured correctly. No source job was started.",
+      503,
+    );
+  return limit;
 }

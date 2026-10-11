@@ -13,7 +13,7 @@ type Run = {
   status: string;
   usageTotalUsd?: number;
 };
-function parseRun(value: unknown): Run {
+export function parseRun(value: unknown): Run {
   const data = (value as { data?: Partial<Run> })?.data;
   if (
     !data ||
@@ -30,14 +30,14 @@ function parseRun(value: unknown): Run {
   }
   return data as Run;
 }
-export class RedditProvider {
+export class ApifyProvider {
   constructor(
-    private token: string,
-    private budget: number,
-    private fetcher: typeof fetch = fetch,
-    private itemLimit = MAX_ITEMS,
+    protected token: string,
+    protected budget: number,
+    protected fetcher: typeof fetch = fetch,
+    protected itemLimit = MAX_ITEMS,
   ) {}
-  private async request(path: string, init: RequestInit = {}) {
+  protected async request(path: string, init: RequestInit = {}) {
     let response: Response;
     try {
       response = await this.fetcher(`https://api.apify.com/v2/${path}`, {
@@ -72,6 +72,30 @@ export class RedditProvider {
       throw new AppError("The source returned an unreadable response.", 502);
     }
   }
+  async poll(runId: string): Promise<Run> {
+    return parseRun(
+      await this.request(`actor-runs/${encodeURIComponent(runId)}`),
+    );
+  }
+  async items(datasetId: string): Promise<unknown[]> {
+    const result = await this.request(
+      `datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit)))}`,
+    );
+    if (!Array.isArray(result))
+      throw new AppError("The source returned an unexpected dataset.", 502);
+    return result.slice(
+      0,
+      Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit))),
+    );
+  }
+  async abort(runId: string): Promise<void> {
+    await this.request(`actor-runs/${encodeURIComponent(runId)}/abort`, {
+      method: "POST",
+    });
+  }
+}
+
+export class RedditProvider extends ApifyProvider {
   async start(business: Business): Promise<Run> {
     if (!Number.isFinite(this.itemLimit) || this.itemLimit < MIN_PROVIDER_ITEMS)
       throw new AppError(
@@ -119,26 +143,5 @@ export class RedditProvider {
         }),
       }),
     );
-  }
-  async poll(runId: string): Promise<Run> {
-    return parseRun(
-      await this.request(`actor-runs/${encodeURIComponent(runId)}`),
-    );
-  }
-  async items(datasetId: string): Promise<unknown[]> {
-    const result = await this.request(
-      `datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit)))}`,
-    );
-    if (!Array.isArray(result))
-      throw new AppError("The source returned an unexpected dataset.", 502);
-    return result.slice(
-      0,
-      Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit))),
-    );
-  }
-  async abort(runId: string): Promise<void> {
-    await this.request(`actor-runs/${encodeURIComponent(runId)}/abort`, {
-      method: "POST",
-    });
   }
 }

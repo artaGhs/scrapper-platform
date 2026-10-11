@@ -1,5 +1,5 @@
 import { AppError } from "./config";
-import type { Mode, Scan } from "./types";
+import type { Mode, Scan, Source } from "./types";
 type MaybePromise<T> = T | Promise<T>;
 export interface ScanRepository {
   get(id: string, owner: string): MaybePromise<Scan | null>;
@@ -10,6 +10,7 @@ export interface ScanRepository {
     mode: Mode,
     reservedUsd: number,
     hourlyBudget?: number,
+    sources?: Source[],
   ): MaybePromise<Scan>;
   claim(id: string, owner: string): MaybePromise<boolean>;
   expiredLease(id: string, owner: string): MaybePromise<boolean>;

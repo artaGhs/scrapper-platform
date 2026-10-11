@@ -15,6 +15,11 @@ async function main() {
     () => "database-validation-" + randomUUID(),
   );
   const sql = neon(process.env.DATABASE_URL);
+  const xOwner = "database-validation-" + randomUUID();
+  const xOther = "database-validation-" + randomUUID();
+  const priorXLimit = process.env.X_MONTHLY_RUN_LIMIT;
+  const month = new Date().toISOString().slice(0, 7);
+  let xReserved = false;
   try {
     const key = randomUUID();
     const description =
@@ -50,6 +55,35 @@ async function main() {
     await assert.rejects(
       db.feedback(scan.id, other, scan.results[0].id, "save", true),
       { status: 404 },
+    );
+    const both = await db.create(
+      owner,
+      randomUUID(),
+      description,
+      "sample",
+      0,
+      0,
+      ["reddit", "x"],
+    );
+    await assert.rejects(
+      db.create(owner, both.key, description, "sample", 0, 0, ["x"]),
+      { status: 409 },
+    );
+    let combined = both;
+    while (!["complete", "empty", "failed"].includes(combined.stage))
+      combined = await advance(combined.id, owner, db);
+    assert.equal(combined.results.length, 6);
+    assert.deepEqual((await reopened.get(combined.id, owner))!.sources, [
+      "reddit",
+      "x",
+    ]);
+    const xResult = combined.results.find((item) => item.source === "x")!;
+    await db.feedback(combined.id, owner, xResult.id, "save", true);
+    assert.equal(
+      (await reopened.get(combined.id, owner))!.results.filter(
+        (item) => item.saved,
+      ).length,
+      1,
     );
     // No external provider requests. Fake provider tests the durable atomic lease.
     let starts = 0;
@@ -97,11 +131,38 @@ async function main() {
         .filter((result) => result.status === "rejected")
         .every((result) => result.reason.status === 429),
     );
+    const used =
+      await sql`SELECT used FROM scrapper.source_usage WHERE source='x' AND month=${month}`;
+    process.env.X_MONTHLY_RUN_LIMIT = String(Number(used[0]?.used || 0) + 1);
+    let xScan = await db.create(
+      xOwner,
+      randomUUID(),
+      description,
+      "live",
+      0.01,
+      10,
+      ["x"],
+    );
+    xReserved = true;
+    await assert.rejects(
+      db.create(xOther, randomUUID(), description, "live", 0.01, 10, ["x"]),
+      /already has a job/,
+    );
+    while (!["complete", "empty", "partial", "failed"].includes(xScan.stage))
+      xScan = await advance(xScan.id, xOwner, db, { x: provider });
+    await assert.rejects(
+      db.create(xOther, randomUUID(), description, "live", 0.01, 10, ["x"]),
+      /monthly run allowance/,
+    );
     console.log(
-      "Neon validation passed: persistence, ownership, idempotency, feedback, atomic global budget and 10 concurrent advances / one simulated source start.",
+      "Neon validation passed: persistence, ownership, idempotency, feedback, atomic global budget, source idempotency/feedback, X concurrency/monthly allowance and 10 concurrent advances / one simulated source start.",
     );
   } finally {
-    await sql`DELETE FROM scrapper.scans WHERE owner=${owner} OR owner=${other} OR owner = ANY(${budgetOwners})`;
+    if (priorXLimit === undefined) delete process.env.X_MONTHLY_RUN_LIMIT;
+    else process.env.X_MONTHLY_RUN_LIMIT = priorXLimit;
+    if (xReserved)
+      await sql`UPDATE scrapper.source_usage SET used=greatest(used-1,0) WHERE source='x' AND month=${month}`;
+    await sql`DELETE FROM scrapper.scans WHERE owner=${owner} OR owner=${other} OR owner = ANY(${budgetOwners}) OR owner=${xOwner} OR owner=${xOther}`;
   }
 }
 main().catch(() => {

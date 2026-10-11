@@ -1,5 +1,5 @@
 import { MAX_ITEMS } from "./config";
-import type { Business, Opportunity, SourceItem } from "./types";
+import type { Business, Opportunity, SourceItem, Source } from "./types";
 
 const categories = [
   {
@@ -102,10 +102,29 @@ export function interpret(description: string): Business {
   };
 }
 
-export function originalUrl(value: unknown): string | null {
+export function originalUrl(
+  value: unknown,
+  source: Source = "reddit",
+): string | null {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
+    if (source === "x") {
+      if (
+        url.protocol !== "https:" ||
+        url.username ||
+        url.password ||
+        !["x.com", "www.x.com", "twitter.com", "www.twitter.com"].includes(
+          url.hostname,
+        ) ||
+        !/^\/(?:[a-z0-9_]{1,15}|i\/web)\/status\/\d+\/?$/i.test(url.pathname)
+      )
+        return null;
+      url.hostname = "x.com";
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    }
     if (
       url.protocol !== "https:" ||
       !["reddit.com", "www.reddit.com", "old.reddit.com"].includes(
@@ -136,9 +155,20 @@ function publication(value: unknown): string | null {
     return null;
   return new Date(ms).toISOString();
 }
-export function isDiscussionRecord(record: unknown): boolean {
+export function isDiscussionRecord(
+  record: unknown,
+  source: Source = "reddit",
+): boolean {
   if (!record || typeof record !== "object") return false;
   const row = record as Record<string, unknown>;
+  if (source === "x")
+    return (
+      (!row.type || row.type === "tweet") &&
+      !!originalUrl(row.url, "x") &&
+      typeof row.text === "string" &&
+      row.text.trim().length > 0 &&
+      row.isRetweet !== true
+    );
   if (
     typeof row.dataType === "string" &&
     !["post", "comment"].includes(row.dataType)
@@ -154,14 +184,18 @@ export function isDiscussionRecord(record: unknown): boolean {
     )
   );
 }
-export function normalize(records: unknown[], now = Date.now()): SourceItem[] {
+export function normalize(
+  records: unknown[],
+  now = Date.now(),
+  source: Source = "reddit",
+): SourceItem[] {
   const seen = new Set<string>();
   const texts = new Set<string>();
   const output: SourceItem[] = [];
   for (const record of records.slice(0, MAX_ITEMS)) {
-    if (!isDiscussionRecord(record)) continue;
+    if (!isDiscussionRecord(record, source)) continue;
     const row = record as Record<string, unknown>;
-    const url = originalUrl(row.url);
+    const url = originalUrl(row.url, source);
     const title = typeof row.title === "string" ? row.title.slice(0, 300) : "";
     const text =
       typeof row.body === "string"
@@ -172,7 +206,10 @@ export function normalize(records: unknown[], now = Date.now()): SourceItem[] {
     if (!url || (!text && !title)) continue;
     const combined = `${title} ${text}`.toLowerCase().replace(/[^a-z0-9]/g, "");
     // One entry per discussion; multiple comments in one thread cannot dominate the list.
-    const thread = url.match(/\/comments\/([a-z0-9]+)/i)?.[1] || url;
+    const thread =
+      source === "x"
+        ? url.match(/\/status\/(\d+)/)?.[1] || url
+        : url.match(/\/comments\/([a-z0-9]+)/i)?.[1] || url;
     if (seen.has(thread) || texts.has(combined)) continue;
     const publishedAt = publication(row.createdAt ?? row.created_utc);
     if (publishedAt && now - Date.parse(publishedAt) > 30 * 86400_000) continue;
@@ -180,7 +217,8 @@ export function normalize(records: unknown[], now = Date.now()): SourceItem[] {
     seen.add(thread);
     texts.add(combined);
     output.push({
-      id: typeof row.id === "string" ? row.id.slice(0, 100) : thread,
+      source,
+      id: `${source}:${thread}`,
       url,
       title,
       text,

@@ -2,8 +2,8 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { AppError, RETENTION_MS } from "./config";
-import { terminalStages, type Mode, type Scan } from "./types";
+import { AppError, RETENTION_MS, xMonthlyRunLimit } from "./config";
+import { terminalStages, type Mode, type Scan, type Source } from "./types";
 
 export class ScanStore {
   private db: DatabaseSync;
@@ -15,7 +15,8 @@ export class ScanStore {
       CREATE TABLE IF NOT EXISTS scans (id TEXT PRIMARY KEY, owner TEXT NOT NULL, idem TEXT NOT NULL, mode TEXT NOT NULL,
       description TEXT NOT NULL, stage TEXT NOT NULL, created INTEGER NOT NULL, reserved REAL NOT NULL,
       body TEXT NOT NULL, lease INTEGER NOT NULL DEFAULT 0, UNIQUE(owner, idem));
-      CREATE INDEX IF NOT EXISTS scan_owner ON scans(owner, created);`);
+      CREATE INDEX IF NOT EXISTS scan_owner ON scans(owner, created);
+      CREATE TABLE IF NOT EXISTS source_usage (source TEXT NOT NULL, month TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY(source, month));`);
   }
   close() {
     this.db.close();
@@ -33,6 +34,7 @@ export class ScanStore {
     mode: Mode,
     reservedUsd: number,
     hourlyBudget = 0,
+    sources: Source[] = ["reddit"],
   ): Scan {
     const now = Date.now();
     this.db.exec("BEGIN IMMEDIATE");
@@ -42,14 +44,24 @@ export class ScanStore {
         .run(now - RETENTION_MS);
       const duplicate = this.db
         .prepare(
-          "SELECT body FROM scans WHERE owner=? AND (idem=? OR (description=? AND mode=? AND created>?)) ORDER BY created DESC LIMIT 1",
+          `SELECT body FROM scans WHERE owner=? AND (idem=? OR (description=? AND mode=? AND COALESCE(json_extract(body, '$.sources'), '["reddit"]')=? AND created>?)) ORDER BY created DESC LIMIT 1`,
         )
-        .get(owner, key, description, mode, now - 120_000);
+        .get(
+          owner,
+          key,
+          description,
+          mode,
+          JSON.stringify(sources),
+          now - 120_000,
+        );
       if (duplicate) {
         const scan = JSON.parse(duplicate.body as string) as Scan;
         if (
           scan.key === key &&
-          (scan.description !== description || scan.mode !== mode)
+          (scan.description !== description ||
+            scan.mode !== mode ||
+            JSON.stringify(scan.sources || ["reddit"]) !==
+              JSON.stringify(sources))
         )
           throw new AppError(
             "This run key belongs to another request. Start a new search.",
@@ -88,6 +100,38 @@ export class ScanStore {
             429,
           );
       }
+      if (mode === "live" && sources.includes("x")) {
+        const activeX = this.db
+          .prepare(
+            "SELECT COUNT(*) AS n FROM scans WHERE mode='live' AND stage NOT IN ('complete','empty','partial','failed') AND created>? AND EXISTS (SELECT 1 FROM json_each(body, '$.sources') WHERE value='x')",
+          )
+          .get(now - 210_000);
+        if (Number(activeX?.n) > 0)
+          throw new AppError(
+            "The X source already has a job in progress. Wait for it to finish before starting another.",
+            429,
+          );
+      }
+      const xLimit =
+        mode === "live" && sources.includes("x")
+          ? xMonthlyRunLimit()
+          : undefined;
+      if (xLimit !== undefined) {
+        const month = new Date(now).toISOString().slice(0, 7);
+        const usage = this.db
+          .prepare("SELECT used FROM source_usage WHERE source='x' AND month=?")
+          .get(month);
+        if (Number(usage?.used || 0) >= xLimit)
+          throw new AppError(
+            "The X pilot has reached its monthly run allowance. Reddit and sample mode remain available.",
+            429,
+          );
+        this.db
+          .prepare(
+            "INSERT INTO source_usage(source, month, used) VALUES ('x', ?, 1) ON CONFLICT(source,month) DO UPDATE SET used=used+1",
+          )
+          .run(month);
+      }
       const scan: Scan = {
         id: randomUUID(),
         owner,
@@ -99,6 +143,8 @@ export class ScanStore {
         updatedAt: now,
         results: [],
         reservedUsd,
+        sources,
+        xMonthlyRunLimit: xLimit,
       };
       this.db
         .prepare(

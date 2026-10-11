@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   terminalStages,
+  sourceNames,
+  type Source,
   type Mode,
   type Opportunity,
   type PublicScan,
@@ -125,8 +127,13 @@ function Result({
       <div className="result-content">
         <div className="result-meta">
           <span className={`tag ${item.synthetic ? "sample-tag" : ""}`}>
-            {item.synthetic ? "Fictional example" : "Reddit"}
+            {item.synthetic
+              ? "Fictional example"
+              : sourceNames[item.source || "reddit"]}
           </span>
+          {item.synthetic && (
+            <span>{sourceNames[item.source || "reddit"]} sample</span>
+          )}
           <span>
             {item.synthetic ? "No publication date" : when(item.publishedAt)}
           </span>
@@ -191,6 +198,7 @@ export default function Home() {
   const [description, setDescription] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const progressSection = useRef<HTMLElement>(null);
+  const [selection, setSelection] = useState<"reddit" | "x" | "both">("reddit");
   const [mode, setMode] = useState<Mode>("sample");
   const [scan, setScan] = useState<PublicScan | null>(null);
   const [error, setError] = useState("");
@@ -236,6 +244,11 @@ export default function Home() {
               remember(previous);
               setDescription(previous.description);
               setMode(previous.mode);
+              setSelection(
+                previous.sources?.length === 2
+                  ? "both"
+                  : previous.sources?.[0] || "reddit",
+              );
             }
           } catch {
             try {
@@ -307,7 +320,12 @@ export default function Home() {
       const next = await request<PublicScan>("/api/scans", {
         method: "POST",
         headers: mode === "live" ? { "x-live-access": accessCode } : {},
-        body: JSON.stringify({ description, mode, key: runKey.current }),
+        body: JSON.stringify({
+          description,
+          mode,
+          sources: selection === "both" ? ["reddit", "x"] : [selection],
+          key: runKey.current,
+        }),
       });
       remember(next);
       requestAnimationFrame(() =>
@@ -378,7 +396,7 @@ export default function Home() {
         : scan?.stage === "searching"
           ? scan.mode === "sample"
             ? "Loading fictional examples"
-            : "Waiting for the Reddit source job"
+            : "Waiting for source jobs"
           : scan?.stage === "reviewing"
             ? `Reviewing ${scan.retrieved ?? 0} returned records`
             : scan?.stage === "ranking"
@@ -436,7 +454,7 @@ export default function Home() {
             <div className="panel-heading">
               <h2>Your business, in a few words.</h2>
               <span className="tag">
-                {mode === "sample" ? "Sample mode" : "Live Reddit"}
+                {mode === "sample" ? "Sample mode" : "Live search"}
               </span>
             </div>
             <form onSubmit={run}>
@@ -501,9 +519,25 @@ export default function Home() {
                       runKey.current = null;
                     }}
                   />
-                  <span>Live Reddit</span>
+                  <span>Live search</span>
                 </label>
               </fieldset>
+              <div className="source-selection">
+                <label htmlFor="source">Search in</label>
+                <select
+                  id="source"
+                  value={selection}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setSelection(event.target.value as "reddit" | "x" | "both");
+                    runKey.current = null;
+                  }}
+                >
+                  <option value="reddit">Reddit</option>
+                  <option value="x">X</option>
+                  <option value="both">Reddit + X</option>
+                </select>
+              </div>
               {mode === "live" && (
                 <div className="pilot-access">
                   <label htmlFor="access-code" className="field-label">
@@ -524,7 +558,11 @@ export default function Home() {
                 <p>
                   {mode === "sample"
                     ? "Fictional examples. No live search or original post links."
-                    : "One source. Up to 50 records. Pilot access required."}
+                    : selection === "x"
+                      ? "X pilot: up to 10 posts. Access code required."
+                      : selection === "both"
+                        ? "Reddit + X: up to 50 records total. Access code required."
+                        : "Reddit: up to 50 records. Access code required."}
                 </p>
                 <button
                   className="run-button"
@@ -578,9 +616,37 @@ export default function Home() {
                 </div>
               ))}
               <span className="rail-mode">
-                {scan.mode === "sample" ? "Sample examples" : "Reddit only"}
+                {scan.mode === "sample"
+                  ? "Sample examples"
+                  : (scan.sources || ["reddit"])
+                      .map((source) => sourceNames[source])
+                      .join(" + ")}
               </span>
             </div>
+            {!!scan.sourceRuns?.length && (
+              <ul className="source-progress" aria-label="Source progress">
+                {scan.sourceRuns.map((run) => (
+                  <li key={run.source}>
+                    <strong>{sourceNames[run.source]}</strong>
+                    <span>
+                      {scan.mode === "sample" ? "Sample · " : ""}
+                      {run.status === "queued"
+                        ? "Waiting to start"
+                        : run.status === "searching"
+                          ? scan.mode === "sample"
+                            ? "Loading examples"
+                            : "Searching"
+                          : run.status === "complete"
+                            ? `${run.retrieved} records returned`
+                            : run.status === "partial"
+                              ? `${run.retrieved} records · stopped early`
+                              : "Could not finish"}
+                    </span>
+                    {run.error && <p>{run.error}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
             {busy && (
               <div className="working-state">
                 <div className="working-line" aria-hidden="true" />
@@ -591,7 +657,7 @@ export default function Home() {
                 </p>
                 <span>
                   {scan.business
-                    ? `Using ${scan.business.queries.length} phrases from your description`
+                    ? `Using product terms from your description`
                     : "Your input stays here while we work."}
                 </span>
               </div>
@@ -602,14 +668,29 @@ export default function Home() {
                   Search phrases <span>{scan.business.category}</span>
                 </summary>
                 <div>
-                  {scan.business.queries.map((query) => (
-                    <span key={query}>{query}</span>
-                  ))}
+                  {(scan.sourceRuns?.length
+                    ? scan.sourceRuns
+                    : [
+                        {
+                          source: "reddit" as Source,
+                          queries: scan.business.queries,
+                        },
+                      ]
+                  )
+                    .flatMap((run) =>
+                      (run.queries || []).map(
+                        (query) => `${sourceNames[run.source]}: ${query}`,
+                      ),
+                    )
+                    .map((query) => (
+                      <span key={query}>{query}</span>
+                    ))}
                 </div>
                 <p>
                   {scan.business.queryMethod === "Gemini draft"
-                    ? "Gemini drafted these grounded search phrases. "
+                    ? "Gemini drafted the Reddit search phrases. "
                     : "Search phrases use your stated keywords. "}
+                  X combines product keywords with explicit-request phrases.
                   Conservative keyword matching checks explicit requests and
                   shared details. It can miss nuance; review every result.
                 </p>
@@ -629,7 +710,9 @@ export default function Home() {
                         ? "This search couldn’t finish."
                         : scan.results.length
                           ? `${scan.results.length} ${scan.mode === "sample" ? "examples" : "matches"} worth a closer look.`
-                          : "No strong matches this time."}
+                          : scan.stage === "partial"
+                            ? "Search finished with gaps."
+                            : "No strong matches this time."}
                     </h2>
                   </div>
                   <button className="text-button" onClick={reset}>
@@ -639,7 +722,7 @@ export default function Home() {
                 {scan.mode === "sample" && (
                   <p className="sample-disclosure">
                     These are fictional discussions that demonstrate matching.
-                    They were not found on Reddit, have no original URLs or
+                    They were not found on Reddit or X, have no original URLs or
                     dates, and are not leads.
                   </p>
                 )}
@@ -696,7 +779,9 @@ export default function Home() {
                     <p>
                       {scan.mode === "sample"
                         ? "This small fixture set covers food-photo tracking, Shopify discounts, and website uptime. An unrelated business can correctly return no examples."
-                        : "No returned record passed the request-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
+                        : scan.stage === "partial"
+                          ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
+                          : "No returned record passed the request-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
                     </p>
                     <button onClick={reset}>
                       Refine the description <Arrow />
@@ -711,7 +796,7 @@ export default function Home() {
                       : "returned records"}
                     .{" "}
                     {scan.mode === "live"
-                      ? "This bounded search does not cover all Reddit discussions."
+                      ? "This bounded search does not cover all conversations on the selected sources."
                       : "Sample mode makes no external data calls."}
                   </p>
                 )}

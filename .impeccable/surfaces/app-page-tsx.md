@@ -18,3 +18,5 @@ Grounded candidates considered: community reading pane, search notebook, acquisi
 Unresolved: authenticated provider quality and commercial permission. Sample cards are fictional and carry no original URLs or publication dates.
 
 Finish review: updated authorization and live evidence in PRODUCT.md, changed the live cap to 50, gated paid access, brought actual progress into view, shortened the mobile introduction/form, and made synthetic fit explanations sample-aware. Live retrieval quality and commercial permission remain unresolved.
+
+Reddit/X extension: preserve the desk and one description → Run action. A compact native source selector chooses Reddit, X or both; source status rows and result tags show provenance. Each source can finish or fail independently. Free X pilot limits and retrieval precision remain unresolved commercial/quality constraints, documented outside the primary flow. Instagram/TikTok deferred, YouTube outside scope.

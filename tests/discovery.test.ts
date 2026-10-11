@@ -12,7 +12,7 @@ test("specific request-and-fit matching excludes topic chatter and unrelated exa
   assert.ok(
     results.every(
       (result) =>
-        result.id.startsWith("food-") &&
+        result.id.startsWith("reddit:food-") &&
         result.url === null &&
         result.publishedAt === null,
     ),
@@ -24,7 +24,7 @@ test("specific request-and-fit matching excludes topic chatter and unrelated exa
     ),
   );
   assert.equal(shop.length, 3);
-  assert.ok(shop.every((result) => result.id.startsWith("shop-")));
+  assert.ok(shop.every((result) => result.id.startsWith("reddit:shop-")));
   const uptime = rank(
     sampleItems(),
     interpret(

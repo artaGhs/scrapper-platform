@@ -999,3 +999,66 @@ footer {
     min-height: 110px;
   }
 }
+
+.source-selection {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 18px;
+  font-size: 13px;
+}
+.source-selection label {
+  font-weight: 600;
+}
+.source-selection select {
+  min-height: 36px;
+  padding: 6px 30px 6px 10px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+}
+.source-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  padding: 0 0 18px;
+  margin: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.source-progress li {
+  flex: 1 1 220px;
+}
+.source-progress strong {
+  margin-right: 12px;
+}
+.source-progress span,
+.source-progress p {
+  color: var(--muted);
+}
+.source-progress p {
+  margin: 6px 0 0;
+  max-width: 68ch;
+}
+@media (max-width: 400px) {
+  .source-selection {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  textarea {
+    height: 110px;
+  }
+  .mode-options {
+    margin: 12px 0;
+  }
+  .examples {
+    margin: 12px 0;
+  }
+  .source-selection {
+    margin-bottom: 10px;
+  }
+}

@@ -2,7 +2,7 @@
 
 ## Paid validation boundary
 
-The user authorized validation using existing credit, no top-ups, and a combined maximum of $1. After read-only investigation of the first run, the user authorized one bounded additional source attempt. That five-item attempt was rejected without charge; the user then explicitly approved one corrected ten-item check capped at $0.08. No further source jobs were started. One separate Gemini generation request was made.
+The user authorized validation using existing credit, no top-ups, and a combined maximum of $1. After read-only investigation of the first run, the user authorized one bounded additional source attempt. That five-item attempt was rejected without charge; the user then explicitly approved one corrected ten-item check capped at $0.08. No further Reddit source jobs were started. One separate Gemini generation request was made. The later, separately authorized X check is recorded in [X validation](x-validation.md): $0.020, ten real posts, zero qualified matches. Total reported Reddit/X source charges are $0.112.
 
 | Source attempt                     | Requested records / charge cap | Terminal state              | Reported charge | Returned evidence                                         |
 | ---------------------------------- | ------------------------------ | --------------------------- | --------------- | --------------------------------------------------------- |
@@ -18,7 +18,7 @@ Run identifiers, original datasets, sanitized logs, usage summaries and one-run 
 
 ## Functional evidence
 
-- 19 unit tests cover request-and-fit matching, explicit capabilities, provenance URLs, duplicate/stale filtering, unknown dates, promotional rejection, bounded model output, session ownership, persistence, idempotency, concurrent paid-job prevention, uncertain starts, global source reservations and partial results.
+- 28 unit tests cover request-and-fit matching, explicit capabilities, provenance URLs, duplicate/stale filtering, unknown dates, promotional rejection, bounded model output, session ownership, persistence, idempotency, concurrent paid-job prevention, uncertain starts, global source reservations and partial results.
 - A real Neon validation passed persistence across store instances, ownership isolation, idempotent creation, feedback, concurrent global budget reservations and ten concurrent advances with exactly one **simulated** source start.
 - Browser checks cover description → actual progress → results, saving, feedback, reload persistence, honest sample/empty states, mobile keyboard use, reduced motion, overflow, HTTP ownership, idempotency, read-only GET, cross-origin rejection and input limits.
 - Production build, lint and TypeScript checks are part of deployment verification.
@@ -27,7 +27,7 @@ This establishes the prototype's mechanics and a bounded retrieval of real posts
 
 ## Deployment verification
 
-The Vercel production build completed and all four browser checks passed against the deployed application backed by Neon, including save/reload persistence and rejection of live requests without pilot access. The public URL is https://scrapper-platform-khaki.vercel.app. Deployment uploads explicitly exclude local environment files, private validation state and SQLite files; production credentials are configured through Vercel's private environment handling.
+The Vercel production build completed and all six browser checks passed against the deployed application backed by Neon, including save/reload persistence and rejection of live requests without pilot access. The public URL is https://scrapper-platform-khaki.vercel.app. Deployment uploads explicitly exclude local environment files, private validation state and SQLite files; production credentials are configured through Vercel's private environment handling.
 
 ## Dependency and secret checks
 
@@ -55,7 +55,7 @@ Retrieval, provenance normalization and rejection of unrelated posts are validat
 
 ## Gemini's precise role
 
-Gemini is integrated into the application's live `interpreting` stage when `GEMINI_API_KEY` is configured. It drafts up to three grounded search phrases from the supplied description and the heuristic's stated terms. The service then passes those phrases to the provider. The application-stage wiring and fallback on model failure are covered by an injected-model test. The actual API generation check succeeded with 96 input and 36 output tokens; it was more than a connectivity check.
+Gemini is integrated into the application's live `interpreting` stage for scans containing Reddit when `GEMINI_API_KEY` is configured. It drafts up to three grounded search phrases from the supplied description and the heuristic's stated terms. The service then passes those phrases to the Reddit provider. X-only scans do not call Gemini: they combine grounded product terms with explicit-request phrases in one deterministic advanced query. The application-stage wiring and fallback on model failure are covered by an injected-model test. The actual API generation check succeeded with 96 input and 36 output tokens; it was more than a connectivity check.
 
 Business categorization, capability extraction, explicit-request detection, fit filtering and ranking remain deterministic heuristics. Sample mode does not call Gemini. Source validation deliberately injects the provider and bypasses model generation so it isolates retrieval and adds no model spending. Neither model-powered interpretation nor model-powered lead scoring is claimed.
 

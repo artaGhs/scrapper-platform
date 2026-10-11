@@ -24,7 +24,7 @@ A desktop or mobile browser, a short product description, and original public di
 
 ## Capabilities and Constraints
 
-One-page Next.js/React prototype with strict TypeScript for app, API, provider/storage and future AWS integration logic, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Live Reddit connector is configurable; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. No global Instagram, checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
+One-page Next.js/React prototype with strict TypeScript for app, API, provider/storage and future AWS integration logic, server-only credentials, persistent session-owned scans, truthful progress, up to ten matches. Reddit and X connectors are configurable, with Reddit/X/both source selection and actual per-source status; absent credentials default to clearly labeled synthetic examples. Vercel deployment with free Neon durable storage is authorized. Paid live calls require pilot access and explicit server budgets. Instagram and TikTok are deferred until after the Reddit/X MVP; YouTube is outside scope. No checkout or automatic outreach. AWS-track payment-service eligibility remains unconfirmed; Amazon Pay and AWS Marketplace billing are distinct candidates.
 
 ## Brand Commitments
 
@@ -32,7 +32,7 @@ Project name Scrapper platform. Plain factual language, very simple landing dire
 
 ## Evidence on Hand
 
-README.md, docs/research.md, docs/mvp-plan.md, docs/validation.md. Three explicitly authorized Apify attempts reported $0.092 total charges. The corrected ten-item check succeeded with seven real posts containing text, original URLs and dates; all normalized, but none qualified for the supplied business. Useful query precision remains unproven. One separate Gemini query-drafting generation passed using 96 input and 36 output tokens; service wiring and fallback are tested with an injected model. No testimonials, customer outcomes or commercial permission. Synthetic demonstration content must be unmistakable and have no invented original links.
+README.md, docs/research.md, docs/mvp-plan.md, docs/validation.md. Three explicitly authorized Apify attempts reported $0.092 total charges. The corrected ten-item check succeeded with seven real posts containing text, original URLs and dates; all normalized, but none qualified for the supplied business. Useful query precision remains unproven. One bounded X free-demo validation returned ten real posts with text, original URLs and dates, reported $0.020, and yielded no qualified matches. Current free X entitlement is ten items per run and five runs per month; commercial resale rights and useful search coverage remain unverified. One separate Gemini query-drafting generation passed using 96 input and 36 output tokens; service wiring and fallback are tested with an injected model. No testimonials, customer outcomes or commercial permission. Synthetic demonstration content must be unmistakable and have no invented original links.
 
 ## Product Principles
 

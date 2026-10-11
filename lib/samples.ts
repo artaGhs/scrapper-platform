@@ -1,4 +1,4 @@
-import type { SourceItem } from "./types";
+import type { SourceItem, Source } from "./types";
 
 // Fictional fixtures: no invented authors, original URLs, or publication times.
 const examples = [
@@ -53,14 +53,17 @@ const examples = [
     "Anyone recommend an uptime monitoring alternative that sends website downtime alerts to Slack?",
   ],
 ];
-export function sampleItems(): SourceItem[] {
-  return examples.map(([id, title, text]) => ({
-    id,
-    title,
-    text,
-    url: null,
-    community: null,
-    publishedAt: null,
-    synthetic: true,
-  }));
+export function sampleItems(sources: Source[] = ["reddit"]): SourceItem[] {
+  return sources.flatMap((source) =>
+    examples.map(([id, title, text]) => ({
+      source,
+      id: `${source}:${id}`,
+      title,
+      text,
+      url: null,
+      community: null,
+      publishedAt: null,
+      synthetic: true,
+    })),
+  );
 }

@@ -12,12 +12,18 @@ import {
   session,
 } from "@/lib/http";
 import { store } from "@/lib/store";
-import { publicScan } from "@/lib/types";
+import { publicScan, selectedSources } from "@/lib/types";
 export const runtime = "nodejs";
 const schema = z.object({
   description: z.string().trim().min(20).max(1500),
   mode: z.enum(["sample", "live"]),
   key: z.string().uuid(),
+  sources: z
+    .array(z.enum(["reddit", "x"]))
+    .min(1)
+    .max(2)
+    .refine((values) => new Set(values).size === values.length)
+    .optional(),
 });
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +35,8 @@ export async function POST(request: NextRequest) {
       );
     const owner = session(request) || newSession();
     if (input.data.mode === "live") authorizeLive(request);
-    const config = input.data.mode === "live" ? liveConfig() : undefined;
+    const sources = selectedSources(input.data.sources);
+    const config = input.data.mode === "live" ? liveConfig(sources) : undefined;
     const scan = await (
       await store()
     ).create(
@@ -39,6 +46,7 @@ export async function POST(request: NextRequest) {
       input.data.mode,
       config?.budget || 0,
       config?.hourlyBudget,
+      sources,
     );
     return attachSession(json(publicScan(scan), 201), owner, request);
   } catch (error) {

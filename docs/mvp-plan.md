@@ -1,5 +1,7 @@
 # Executable MVP specification
 
+> Scope update, October 11, 2026: the user's MVP now includes Reddit and X in the same simple flow, with Instagram/TikTok deferred and YouTube excluded. The original specification below is retained; [X implementation and evidence](x-validation.md) records the extension.
+
 > Implementation update (October 11, 2026): the MVP is now built with Vercel/Neon storage and a gated source connector. See [README](../README.md) and [observed validation](validation.md). The original hypotheses and unresolved rights below remain research, not validated outcomes.
 
 Planning date: **October 11, 2026**. Target: approximately four hours of future implementation by an experienced builder with a ready environment and feasible source. This is an estimate, not a delivery promise. Current authorization is research/planning and GitHub setup; the steps below have not been implemented.
