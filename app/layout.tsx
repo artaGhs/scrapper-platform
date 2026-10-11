@@ -8,7 +8,7 @@ const font = Host_Grotesk({
   variable: "--font-sans",
 });
 export const metadata: Metadata = {
-  metadataBase: new URL("https://scrapper-platform-khaki.vercel.app"),
+  metadataBase: new URL("https://trythreadfinder.com"),
   title: "Scrapper — find a conversation worth joining",
   description:
     "Find Reddit conversations about the problem your business solves. Review original posts and comments, save relevant matches, and decide where to join in.",
