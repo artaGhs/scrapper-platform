@@ -19,7 +19,6 @@ import Link from "next/link";
 import {
   terminalStages,
   sourceNames,
-  type Source,
   type Mode,
   type Opportunity,
   type PublicScan,
@@ -173,7 +172,11 @@ function Result({
       </span>
       <div className="result-meta">
         <span className="tag">
-          {item.synthetic ? "Fictional example" : source}
+          {item.synthetic
+            ? "Fictional example"
+            : item.kind === "comment"
+              ? `${source} comment`
+              : source}
         </span>
         {item.synthetic && <span>{source} sample</span>}
         <span>
@@ -809,7 +812,31 @@ export default function Home() {
             {scan.business && (
               <div className="scope">
                 <p>
-                  {scan.business.communities?.length ? (
+                  {scan.business.searchScope === "reddit-wide" ? (
+                    <>
+                      {scan.mode === "sample"
+                        ? "Example Reddit-wide search"
+                        : finished
+                          ? "Searched across Reddit"
+                          : "Searching across Reddit"}
+                      {scan.business.communities?.length ? (
+                        <>
+                          {" "}
+                          · additional focused queries in{" "}
+                          {scan.business.communities.map((name) => (
+                            <span className="community" key={name}>
+                              r/{name}
+                            </span>
+                          ))}
+                        </>
+                      ) : (
+                        " · business and problem keywords"
+                      )}
+                      .
+                      {scan.mode === "live" &&
+                        " Post and comment keyword searches share one bounded run."}
+                    </>
+                  ) : scan.business.communities?.length ? (
                     <>
                       {scan.mode === "sample"
                         ? "Example community scope"
@@ -844,7 +871,7 @@ export default function Home() {
                       ? scan.sourceRuns
                       : [
                           {
-                            source: "reddit" as Source,
+                            source: "reddit" as const,
                             queries: scan.business.queries,
                           },
                         ]
@@ -866,8 +893,10 @@ export default function Home() {
                     )),
                   )}
                   <p>
-                    Reddit searches the past year. Category and problem phrases
-                    find candidates, then context and fit checks qualify them.
+                    Reddit post searches use the past year; returned dated
+                    records older than a year are excluded. Product keywords and
+                    problem wording find candidates, then context and fit checks
+                    qualify them.
                     {scan.modelReview === "Gemini + keyword rules"
                       ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
                       : " Keyword rules check the returned context."}{" "}
@@ -1010,11 +1039,11 @@ export default function Home() {
                       {scan.mode === "sample"
                         ? "This small fixture set covers food-photo tracking, Shopify discounts, and website uptime. An unrelated business can correctly return no examples."
                         : scan.developer
-                          ? `${scan.retrieved ?? 0} posts were returned; none passed the fit checks. You can refine your description and run another developer search.`
+                          ? `${scan.retrieved ?? 0} records were returned; none passed the fit checks. You can refine your description and run another developer search.`
                           : scan.free
                             ? scan.stage === "partial"
-                              ? "None of the returned posts passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. Full research is coming later."
-                              : `${scan.retrieved ?? 0} posts were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. Full research is coming later.`
+                              ? "None of the returned records passed the fit checks, and the source stopped early. This does not mean relevant conversations do not exist. Full research is coming later."
+                              : `${scan.retrieved ?? 0} records were returned; none passed the fit checks. This small sample does not mean relevant conversations do not exist. Full research is coming later.`
                             : scan.stage === "partial"
                               ? "No returned record passed the fit checks, and some source work failed. Review the source status before running another bounded search."
                               : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}

@@ -396,7 +396,7 @@ test("empty free batch explains zero fit without a misleading retry or gap messa
     page.getByRole("heading", { name: "No suitable matches in this search." }),
   ).toBeVisible();
   await expect(page.locator(".empty-state")).toContainText(
-    "10 posts were returned; none passed the fit checks.",
+    "10 records were returned; none passed the fit checks.",
   );
   await expect(
     page.getByRole("button", { name: "Free search used", exact: true }),
@@ -476,4 +476,91 @@ test("developer login enables repeat searches and leaving restores the public al
   await expect(
     page.getByRole("button", { name: "Leave developer mode" }),
   ).toHaveCount(0);
+});
+
+test("Reddit-wide scope and direct comment originals are visible in live results", async ({
+  page,
+}) => {
+  const url =
+    "https://www.reddit.com/r/smallbusiness/comments/testthread/discussion/commentabc/";
+  const description =
+    "Our website uptime monitor sends Slack alerts when a site goes down.";
+  await page.route("**/api/session", (route) =>
+    route.fulfill({
+      json: { ready: true, freeSearchUsed: false, freeScanId: null },
+    }),
+  );
+  await page.route("**/api/scans", (route) =>
+    route.fulfill({
+      status: 201,
+      json: {
+        id: randomUUID(),
+        description,
+        mode: "live",
+        stage: "complete",
+        free: true,
+        freeSearchUsed: true,
+        retrieved: 10,
+        business: {
+          category: "Website uptime monitoring",
+          summary: description,
+          terms: ["website", "uptime"],
+          featureTerms: ["slack", "alert"],
+          queries: ["website AND down"],
+          communities: ["selfhosted", "webdev", "sysadmin"],
+          searchScope: "reddit-wide",
+        },
+        sourceRuns: [
+          {
+            source: "reddit",
+            status: "complete",
+            retrieved: 10,
+            normalized: 10,
+            searchKinds: ["post", "comment"],
+            queries: ["website AND down"],
+          },
+        ],
+        results: [
+          {
+            source: "reddit",
+            kind: "comment",
+            id: "reddit:testthread:comment:commentabc",
+            title: "",
+            text: "My website goes down again and I only notice when customers call.",
+            evidence:
+              "My website goes down again and I only notice when customers call.",
+            reason: "Website availability problems overlap with monitoring.",
+            need: "Problem context",
+            score: 78,
+            saved: false,
+            irrelevant: false,
+            synthetic: false,
+            community: "r/smallbusiness",
+            publishedAt: "2026-10-11T12:00:00.000Z",
+            url,
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Uptime monitor", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Run research", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "1 match worth a closer look." }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Searched across Reddit", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.locator("article").getByText("Reddit comment", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator("article").getByRole("link", { name: "Open original" }),
+  ).toHaveAttribute("href", url);
+  await expect(page.locator("article blockquote")).toContainText(
+    "My website goes down",
+  );
 });
