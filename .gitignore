@@ -23,3 +23,13 @@ coverage/
 # Future provider exports and local caches are not project documentation
 data/raw/
 .cache/
+
+# Local scan state and browser test output
+.data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+test-results/
+playwright-report/
+.vercel
+.env*

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T12:00:00Z",
+  "title": "Design System: Scrapper platform",
+  "extensions": {
+    "motion": [
+      {
+        "name": "stage-pulse",
+        "value": "1600ms ease-out",
+        "purpose": "Indeterminate active stage only; disabled under reduced motion"
+      }
+    ],
+    "breakpoints": [{ "name": "stack", "value": "800px" }]
+  },
+  "narrative": {
+    "northStar": "The conversation desk",
+    "overview": "An open daylight workspace centered on a business description and original conversations.",
+    "dos": ["Keep one action primary", "Label synthetic examples"],
+    "donts": ["Do not imply a purchase probability"]
+  }
+}
