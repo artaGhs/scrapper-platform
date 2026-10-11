@@ -150,7 +150,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return data;
 }
 function when(value: string | null) {
-  if (!value || !Number.isFinite(Date.parse(value))) return "Date unavailable";
+  if (!value || !Number.isFinite(Date.parse(value))) return null;
   return (
     new Intl.DateTimeFormat(undefined, {
       month: "short",
@@ -172,6 +172,7 @@ function Result({
   pending?: boolean;
 }) {
   const source = sourceNames[item.source || "reddit"];
+  const publicationDate = item.synthetic ? null : when(item.publishedAt);
   return (
     <article
       className={`result ${item.synthetic ? "is-fictional" : ""} ${item.irrelevant ? "is-dismissed" : ""}`}
@@ -188,9 +189,7 @@ function Result({
               : source}
         </span>
         {item.synthetic && <span>{source} sample</span>}
-        <span>
-          {item.synthetic ? "No publication date" : when(item.publishedAt)}
-        </span>
+        {publicationDate && <span>{publicationDate}</span>}
         {item.community && <span>{item.community}</span>}
       </div>
       <h3>{item.title || item.evidence}</h3>
