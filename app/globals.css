@@ -1102,3 +1102,18 @@ footer {
 .locked-preview span:last-child {
   width: 55%;
 }
+
+@media (max-width: 400px) {
+  .examples > div {
+    gap: 4px;
+  }
+  .examples button {
+    padding-inline: 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  .examples button span {
+    display: none;
+  }
+}

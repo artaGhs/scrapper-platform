@@ -103,10 +103,10 @@ export function interpret(description: string): Business {
           },
           {
             phrase:
-              '("tracking meals" OR "food logging") AND (difficult OR struggling OR recommend OR app)',
+              '(calorie OR calories OR food OR meals) AND (tracking OR logging OR counting) AND (hard OR difficult OR struggling OR tedious OR "how do" OR "how can")',
             signal: "problem",
             rationale:
-              "Meal-tracking problems and app discussions; complaints are not buying certainty.",
+              "Informal tracking questions and friction; no app request or buying language is required.",
           },
         ]
       : [
@@ -313,7 +313,7 @@ export function normalize(
   return output;
 }
 const request =
-  /\b(?:is there|are there|anyone (?:know|recommend|using)|can (?:anyone|someone)|looking for|recommend(?:ation|ations)?|suggest(?:ion|ions)?|alternative(?:s)?|need (?:an?|some|help)|how (?:do|can) I|what (?:app|tool)|wish there|tired of|takes too long|struggling with|hard to|difficult to|trouble (?:with|tracking)|hate (?:tracking|logging)|forget to (?:log|track))\b/i;
+  /\b(?:is there|are there|anyone (?:know|recommend|using)|can (?:anyone|someone)|looking for|recommend(?:ation|ations)?|suggest(?:ion|ions)?|alternative(?:s)?|need (?:an?|some|help)|how (?:do|can|should) (?:i|you(?: guys)?|we|people)|what (?:app|tool)|wish there|tired of|takes too long|struggling with|hard to|difficult to|trouble (?:with|tracking)|hate (?:tracking|logging)|forget to (?:log|track))\b/i;
 export function rank(
   items: SourceItem[],
   business: Business,
@@ -332,10 +332,29 @@ export function rank(
         content,
       ) &&
       /\b(?:photo|picture|pics|meal|food|ate|eating)\b/i.test(content);
+    const trackingProblem =
+      /\b(?:struggling|hard|difficult|trouble|hate|tired|too long|forget)\b[^.!?]{0,80}\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(
+        content,
+      ) ||
+      /\b(?:track\w*|log\w*|count\w*)\b[^.!?]{0,80}\b(?:hard|difficult|struggling|too long|tedious|exhausting)\b/i.test(
+        content,
+      );
+    const trackingQuestion =
+      /\bhow (?:do|can|should) (?:i|you(?: guys)?|we|people)\b[^.!?]{0,100}\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(
+        content,
+      );
     const evidence =
       content
         .split(/(?<=[.!?])\s+/)
-        .find((sentence) => request.test(sentence)) ||
+        .find(
+          (sentence) =>
+            request.test(sentence) ||
+            (trackingProblem &&
+              /\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(sentence) &&
+              /hard|difficult|struggling|too long|tedious|exhausting/i.test(
+                sentence,
+              )),
+        ) ||
       (photoEstimationProblem
         ? (item.title || item.text).slice(0, 700)
         : undefined);
@@ -374,13 +393,6 @@ export function rank(
       /\balternatives?\b[^.!?]{0,50}\b(?:calorie (?:tracking|counting)|food (?:tracking|logging|journaling)|meal tracking)\b/i.test(
         content,
       );
-    const trackingProblem =
-      /\b(?:struggling|hard|difficult|trouble|hate|tired|too long|forget)\b[^.!?]{0,80}\b(?:track\w*|log\w*|count\w*|estimat\w*)\b/i.test(
-        content,
-      ) ||
-      /\b(?:track\w*|log\w*|count\w*)\b[^.!?]{0,80}\b(?:hard|difficult|struggling|too long|tedious|exhausting)\b/i.test(
-        content,
-      );
     const coachingRequest =
       /\b(?:looking for|recommend\w*|need)\b[^.!?]{0,80}\b(?:nutrition coach|personal trainer|dietitian)\b/i.test(
         content,
@@ -392,7 +404,8 @@ export function rank(
           (photoEstimationProblem ||
             toolRequest ||
             categoryAlternative ||
-            trackingProblem)
+            trackingProblem ||
+            trackingQuestion)
         : business.category === "Shopify & email marketing"
           ? /\bshopify\b/i.test(content) &&
             /\b(?:discount|codes?|email|cart)\b/i.test(content)
@@ -439,10 +452,11 @@ export function rank(
     results.push({
       ...item,
       evidence: evidence.trim().slice(0, 700),
-      reason: `This discussion mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
+      reason: `This discussion mentions ${[...terms, ...features].slice(0, 3).join(", ")}—details that overlap with your description. ${/calorie/i.test(business.summary) && /estimat/i.test(business.summary) && business.featureTerms.includes("photo") ? "Your stated photo-based calorie estimation could help with food estimation or logging. " : ""}${item.synthetic ? "This fictional request illustrates the matching rule." : "Review the original context to confirm the fit."}`,
       need:
-        photoEstimationProblem &&
-        !/\b(?:app|tool|software|tracker)\b/i.test(content)
+        (photoEstimationProblem || trackingProblem || trackingQuestion) &&
+        !toolRequest &&
+        !categoryAlternative
           ? "Problem context"
           : /alternative|instead of|switch from|moving on from/i.test(content)
             ? "Alternative request"

@@ -67,7 +67,7 @@ The historical runs above tested the earlier pipeline. The final pipeline uses f
 
 A single optional Gemini call assesses up to five candidates using original context, exact quotation validation and accept/reject/uncertain decisions. Missing optional features are not a rejection; explicit incompatible constraints and promotions are. Sample mode makes no model calls. Failure preserves keyword matches with a disclosure. Original text/URLs/dates remain unchanged. Fit scores are not buyer probabilities. X has been removed from the public launch.
 
-36 offline tests pass, including unrelated-domain and explicit-constraint exclusions, category requests without every feature, separate problem/request labels, exact model evidence, failure fallback, once-only review persistence, ownership, idempotency, shared caps, and deferred X safeguards. Type checking, lint and production build pass. Final hosted proof and actual reported source charges are appended after verification.
+37 offline tests pass, including unrelated-domain and explicit-constraint exclusions, category requests without every feature, separate problem/request labels, exact model evidence, failure fallback, once-only review persistence, ownership, idempotency, shared caps, and deferred X safeguards. Type checking, lint and production build pass. Final hosted proof and actual reported source charges are appended after verification.
 
 ## Hosted useful-result verification, October 11, 2026
 
@@ -85,4 +85,12 @@ The actor encountered repeated Reddit HTTP 429 responses, succeeded in about 131
 
 The final preview returns up to three qualified results plus their actual total/hidden count. Additional titles, text, IDs and original links remain server-side. Decorative locked previews represent only actual additional matches; there is no checkout or unlock action. Pricing, subscriptions and entitlement access remain future work.
 
-The final precision pass was tested against the already-returned real dataset without another paid call. General diet distress, meal ideas and coaching requests no longer qualify as software needs; category replacement requests and direct food-photo estimation questions remain. Final offline suite: 36 passing tests.
+The final precision pass was tested against the already-returned real dataset without another paid call. General diet distress, meal ideas and coaching requests no longer qualify as software needs; category replacement requests and direct food-photo estimation questions remain. Final offline suite: 37 passing tests.
+
+## Final release checks
+
+A second hosted photo-calorie scan on the updated classification/preview build returned ten normalized real posts, retained **two**, and finished **partial** after source work hit its limits. Both were assessed by Gemini; their original source text, URLs and dates remained visible. One asks for a free calorie/nutrient/weight-logging app (October 8); price and manual-entry requirements are extra context, not capabilities promised by the photo example. The other is the September 26 photo-AI/app discussion already listed. No nonexistent third result or locked preview was shown. This check reported **$0.080**, so additional source verification cost **$0.160**, below the latest **$0.25** cap; total reported historical/release source charges are **$0.272**. No further paid validation is planned.
+
+The user's final clarification treats ordinary tracking questions and friction as opportunities even without an app recommendation request. “How do you guys track your calories? This is very hard” and “Tracking calories is so tedious” pass with original evidence and the **Problem context** label in the focused acceptance test. The problem query now includes this ordinary wording. This last recall change was checked offline, not with another paid provider/model call. Request language adds a label; it is not a universal acceptance requirement or a buyer-probability signal.
+
+The release has **37 passing offline tests**, **six passing hosted browser checks**, strict type checking, lint and production build, plus earlier Neon persistence/concurrency validation. The final review found no material UI issues. The different-business uptime examples and recorded unrelated source dataset remain offline/negative checks; focused live uptime coverage has not been demonstrated. Useful live proof is the calorie/photo/food-journaling niche.

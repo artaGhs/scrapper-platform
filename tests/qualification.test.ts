@@ -111,6 +111,19 @@ test("general diet distress and coaching requests do not become software matches
     "Problem context",
   );
 });
+test("ordinary tracking questions and informal friction qualify without app or buying language", () => {
+  for (const text of [
+    "How do you guys track your calories? This is very hard.",
+    "How can I log my meals without spending ages on it?",
+    "Tracking calories is so tedious. I struggle to keep it up.",
+  ]) {
+    const match = rank([post(text)], business)[0];
+    assert.ok(match, text);
+    assert.equal(match.need, "Problem context", text);
+    assert.ok(match.text.includes(match.evidence), text);
+    assert.match(match.reason, /Your stated photo-based calorie estimation/);
+  }
+});
 test("query plans pair category phrases with separate signals, preserve rationale and invent no competitor", () => {
   assert.equal(business.queryPlans!.length, 3);
   assert.ok(business.queries[0].includes('"calorie tracking"'));

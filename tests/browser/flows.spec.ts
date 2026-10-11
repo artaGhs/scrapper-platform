@@ -17,6 +17,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await page.getByLabel("Sample examples", { exact: true }).check();
   await page.getByRole("button", { name: "Food photo app" }).click();
   await expect(
     page.getByRole("button", { name: "Run research" }),
@@ -74,6 +75,7 @@ test("empty fixtures and disabled live configuration remain truthful", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.getByLabel("Sample examples", { exact: true }).check();
   await page
     .getByLabel("Tell us what your business does")
     .fill(
@@ -110,6 +112,7 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
   await expect(
     page.getByLabel("Tell us what your business does"),
   ).toBeFocused();
+  await page.getByLabel("Sample examples", { exact: true }).check();
   await page.getByRole("button", { name: "Uptime monitor" }).click();
   await page.getByRole("button", { name: "Run research" }).click();
   await expect(

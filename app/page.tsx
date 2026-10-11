@@ -206,7 +206,7 @@ export default function Home() {
   const [description, setDescription] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const progressSection = useRef<HTMLElement>(null);
-  const [mode, setMode] = useState<Mode>("sample");
+  const [mode, setMode] = useState<Mode>("live");
   const [scan, setScan] = useState<PublicScan | null>(null);
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
