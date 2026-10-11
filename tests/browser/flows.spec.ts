@@ -1,6 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
+
+async function capture(page: Page, name: string) {
+  if (process.env.CAPTURE_SCREENSHOTS !== "1") return;
+  mkdirSync("docs/screenshots", { recursive: true });
+  await page.screenshot({
+    path: `docs/screenshots/${name}.png`,
+    fullPage: true,
+  });
+}
 
 test("sample input → progress → results, save, feedback, persistence and source truth", async ({
   page,
@@ -10,11 +19,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
   await page.goto("/");
   await page.getByRole("button", { name: "Food photo app" }).click();
   await expect(page.getByRole("button", { name: "Run search" })).toBeEnabled();
-  mkdirSync("docs/screenshots", { recursive: true });
-  await page.screenshot({
-    path: "docs/screenshots/desktop.png",
-    fullPage: true,
-  });
+  await capture(page, "desktop");
   await page.getByRole("button", { name: "Run search" }).click();
   await expect(page.getByRole("status")).toContainText(
     /Reading|Preparing|Loading|Reviewing|Checking/,
@@ -59,10 +64,7 @@ test("sample input → progress → results, save, feedback, persistence and sou
   await expect(page.getByRole("button", { name: "Undo feedback" })).toHaveCount(
     1,
   );
-  await page.screenshot({
-    path: "docs/screenshots/results.png",
-    fullPage: true,
-  });
+  await capture(page, "results");
   expect(errors).toEqual([]);
 });
 
@@ -97,10 +99,7 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
   await expect(page.getByRole("button", { name: "Run search" })).toBeInViewport(
     { ratio: 1 },
   );
-  await page.screenshot({
-    path: "docs/screenshots/mobile-start.png",
-    fullPage: true,
-  });
+  await capture(page, "mobile-start");
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("link", { name: "Skip to business description" }),
@@ -125,10 +124,7 @@ test("mobile keyboard flow and reduced motion have no horizontal overflow", asyn
       nodes.some((node) => getComputedStyle(node).animationName !== "none"),
     );
   expect(animated).toBe(false);
-  await page.screenshot({
-    path: "docs/screenshots/mobile.png",
-    fullPage: true,
-  });
+  await capture(page, "mobile");
 });
 
 test("HTTP ownership, idempotency, read-only GET, origin and input bounds", async ({

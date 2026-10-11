@@ -49,7 +49,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Browser tests default to http://127.0.0.1:3173; use `TEST_BASE_URL` to check another running server. `npm run test:database` uses the configured Neon database, creates temporary validation scans, uses a simulated provider, and removes those scans. It does not make paid source calls. The two `scripts/validate-*.ts` live validation scripts require explicit authorization and retain private one-run markers to prevent accidental repeated spending.
+Browser tests default to http://127.0.0.1:3173; use `TEST_BASE_URL` to check another running server. Set `CAPTURE_SCREENSHOTS=1` when intentionally refreshing the committed browser evidence; ordinary checks leave those files untouched. `npm run test:database` uses the configured Neon database, creates temporary validation scans, uses a simulated provider, and removes those scans. It does not make paid source calls. The two `scripts/validate-*.ts` live validation scripts require explicit authorization and retain private one-run markers to prevent accidental repeated spending.
 
 ## Research and deferred work
 
