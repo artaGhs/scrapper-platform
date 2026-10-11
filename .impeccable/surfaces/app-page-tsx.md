@@ -2,25 +2,19 @@
 version: 1
 slug: "app-page-tsx"
 primary_target: "app/page.tsx"
-related_targets: ["app/globals.css"]
+related_targets: ["app/globals.css","app/layout.tsx"]
 ---
 
 # Landing and search workspace
 
-Mode: Operate, with a concise introduction for first-time visitors. Scope: app/page.tsx and app/globals.css.
+Modes: Persuade for the landing hero and its two sections; Operate for the docked results workspace. Scope: app/page.tsx, app/globals.css, app/layout.tsx.
 
-Business owners describe a product and run one bounded search. Original words plus an explanation are the proof; no customer claims or performance metrics exist. Visual choice is delegated in the implementation brief.
+Business owners describe a product and run one bounded search. Original words plus an explanation are the proof; no customer claims or performance metrics exist.
 
-Direction: the conversation desk, an open pale-green workspace with green ink, a large sentence on the left and an immediately usable writing surface on the right. Results form a ruled reading list. Memorable interaction: the search path changes stage only when the server does actual work.
+Direction (October 11, 2026 redesign, user-pinned reference): "The Horizon". Night dome with a cobalt rim above, ice and white below. The landing is a centered hero (beta pill, two-line headline with an italic second line, subcopy, frosted composer on the rim), r/ community cursor tags, and a faded strip of real curated communities. Then "Listen first, then be useful" (three steps on a horizon line), one fictional example match, and a footer where the horizon rises again around the closing CTA. Memorable moment: Run docks the composer (React ViewTransition morph) into a night bar that stays sticky on wide screens; truthful stages light along the horizon rail and matches surface on white cards below. The previous "conversation desk" world is retired.
 
-Grounded candidates considered: community reading pane, search notebook, acquisition checklist, conversation desk (assigned fourth), annotated index, help-thread digest, structured query console. Seed 4652c18f. The desk wins on product clarity; travel-board and map challengers would add indirect task vocabulary. Staging: direct input-to-list with a truthful stage rail. No raster material is needed; semantic controls and original words own the surface. Under the hackathon scope, implementation and browser iteration take precedence over optional generated compositions.
+Preserve: one description → Run action; Reddit only, with no source selector; actual Reddit progress, source text and original links, honest date/age, request/problem labels, community scope and review method. Sample scope is illustrative and never implies a live search. X/Instagram/TikTok deferred; YouTube outside scope. Future paid access must not fabricate extra results or imply checkout exists.
 
-Unresolved: authenticated provider quality and commercial permission. Sample cards are fictional and carry no original URLs or publication dates.
+Public release: live mode is the default. Visitors run research without a pilot code or provider keys; capacity limits return clear retry messages. One small free search per anonymous browser identity, up to three useful results, then a truthful free-search-used state with saved results.
 
-Finish review: updated authorization and live evidence in PRODUCT.md, changed the live cap to 50, gated paid access, brought actual progress into view, shortened the mobile introduction/form, and made synthetic fit explanations sample-aware. Live retrieval quality and commercial permission remain unresolved.
-
-Final Reddit-only release: preserve the desk and one description → Run action. No source selector. Show actual Reddit progress, source text and original links, honest date/age, request/problem labels, community scope, and review method. Sample scope is illustrative and never implies a live search. X/Instagram/TikTok deferred; YouTube outside scope. Future paid access must not fabricate extra results or imply checkout exists.
-
-Public release: live mode remains the default. Visitors describe the business and run research without a pilot code or provider keys. Shared daily capacity is disclosed beside Run research; server-side anonymous limits return clear retry messages.
-
-One small free search is offered per anonymous browser identity. Show up to three useful results, then a truthful free-search-used/full-research-coming-later state with saved results. No locked full-report expansion is collected for the free tier.
+Unresolved: authenticated provider quality and commercial permission; whether "Scrapper" stays the public name (it changes the wordmark).

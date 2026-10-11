@@ -1,78 +1,203 @@
 ---
 name: Scrapper platform
-description: An open conversation desk with a visible search path
+description: Night above the horizon, matches surfacing into daylight below
 colors:
-  ink: "#203b32"
-  muted: "#52675c"
-  canvas: "#f3f5ef"
+  night: "#030a24"
+  night-deep: "#061445"
+  horizon-blue: "#0a2380"
+  glow-cobalt: "#1f4bff"
+  signal: "#2457f5"
+  signal-press: "#1a46db"
+  ice: "#dce8ff"
+  frost: "#eef3ff"
   paper: "#ffffff"
-  accent: "#315d49"
-  accent-soft: "#e0ebd9"
-  line: "#d2dace"
-  error: "#9a3228"
+  ink: "#0b1640"
+  muted: "#4a5a85"
+  line: "#dbe4f7"
+  on-night: "#ffffff"
+  on-night-muted: "#b8c6f2"
+  strip: "#6e86c6"
+  error: "#c42b3c"
 typography:
   display:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "clamp(2.75rem, 5.3vw, 4.75rem)"
+    fontFamily: "Host Grotesk, system-ui, sans-serif"
+    fontSize: "clamp(2.6rem, 6.2vw, 5.6rem)"
     fontWeight: 500
-    lineHeight: 1.04
-    letterSpacing: "-0.04em"
+    lineHeight: 1.02
+    letterSpacing: "-0.035em"
+  headline:
+    fontFamily: "Host Grotesk, system-ui, sans-serif"
+    fontSize: "clamp(1.75rem, 3vw, 2.5rem)"
+    fontWeight: 500
+    lineHeight: 1.1
+    letterSpacing: "-0.025em"
+  title:
+    fontFamily: "Host Grotesk, system-ui, sans-serif"
+    fontSize: "20px"
+    fontWeight: 500
+    lineHeight: 1.3
+    letterSpacing: "-0.01em"
   body:
-    fontFamily: "Arial, Helvetica, sans-serif"
+    fontFamily: "Host Grotesk, system-ui, sans-serif"
     fontSize: "16px"
+    fontWeight: 400
     lineHeight: 1.6
+  ui:
+    fontFamily: "Host Grotesk, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: 1.4
+  label:
+    fontFamily: "Host Grotesk, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 500
+    lineHeight: 1.3
+  code:
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
+    fontSize: "12.5px"
+    fontWeight: 400
+    lineHeight: 1.5
 rounded:
-  control: "8px"
-  panel: "16px"
-  compact: "6px"
-  pill: "100px"
-  dot: "50%"
+  chip: "999px"
+  control: "12px"
+  card: "20px"
+  composer: "24px"
 spacing:
-  small: "8px"
-  medium: "16px"
-  large: "32px"
+  xs: "8px"
+  sm: "12px"
+  md: "20px"
+  lg: "32px"
+  xl: "64px"
+  section: "120px"
 components:
   button-primary:
-    backgroundColor: "{colors.accent}"
+    backgroundColor: "{colors.signal}"
     textColor: "{colors.paper}"
-    rounded: "{rounded.control}"
-    padding: "14px 22px"
+    rounded: "{rounded.chip}"
+    padding: "0 22px"
+    height: "44px"
+  button-primary-hover:
+    backgroundColor: "{colors.signal-press}"
+  button-light:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.chip}"
+    padding: "0 18px"
+    height: "38px"
+  chip:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.chip}"
+    padding: "0 12px"
+    height: "32px"
+  result-card:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.card}"
+    padding: "28px"
 ---
 
 # Design System: Scrapper platform
 
 ## Overview
 
-The conversation desk: an open, daylight workspace for a founder reviewing human requests. Restrained green ink on cool pale paper keeps original words more prominent than decoration. No illustrations are required: editable descriptions, original excerpts and an honest stage rail are the visual material.
+**Creative North Star: "The Horizon"**
+
+The page is a sky at the moment before dawn. Above the horizon is night: the conversations you have not found yet, a dark dome edged with a cobalt glow, faint stars and grain. Below it is daylight: pale ice and white, where real matches surface and are read. Running a search is the crossing: the composer leaves the night and docks over the daylight workspace.
+
+Persuasion lives above the horizon and work lives below it. The landing hero is dramatic and centered; the results workspace is calm, legible and white. Both share one cobalt voice, one grotesk with a real italic, and one line motif (the horizon rail) that appears in "How it works" and in search progress.
+
+**Key Characteristics:**
+- A dark elliptical dome with a glowing cobalt rim, fading to ice and white below.
+- A frosted composer with chip toolbar is the primary object on the first viewport.
+- Real community names (r/loseit, r/shopify…) appear as drifting cursor tags and as a faded strip; never invented users or logos.
+- White result cards with soft blue-tinted shadows; the original quote sits on frost.
 
 ## Colors
 
-Green ink owns headings and actions; pale green holds sample and selected states. White is the writing area and the original excerpt ground. Muted green carries secondary information; red appears only for errors.
+One saturated blue family carries the whole world; everything else is ink, ice and white.
+
+### Primary
+- **Glow Cobalt** (#1f4bff): the horizon rim, the active progress node, beta badge text. Light, never fill for long text.
+- **Signal Blue** (#2457f5): the one action color — Run research, Open original, focus rings, result numerals. White text on it passes 5.6:1.
+
+### Neutral
+- **Night** (#030a24) / **Night Deep** (#061445) / **Horizon Blue** (#0a2380): the dome, the docked bar, the footer band.
+- **Ice** (#dce8ff) / **Frost** (#eef3ff): the daylight below the rim, quote grounds, chip fills.
+- **Paper** (#ffffff): result cards and the workspace page.
+- **Ink** (#0b1640): text on light. **Muted** (#4a5a85): secondary text on light (≥5.5:1 on ice).
+- **On-night Muted** (#b8c6f2): secondary text on the dome.
+- **Strip** (#6e86c6): the large faded community strip only (≥3:1, large text).
+- **Error** (#c42b3c): errors only.
+
+### Named Rules
+**The One Blue Rule.** There is no second hue. Fictional examples are distinguished by dashed outlines and labels, not by a new color.
+
+**The Night Is Above Rule.** Dark surfaces are reserved for the hero dome, the docked composer bar and the footer band. Reading happens on light.
 
 ## Typography
 
-Arial/Helvetica is a dependable operating face available without network font requests. Large sentence-case display text, compact semibold labels, readable 15px original excerpts; 11–13px metadata, 14–18px supporting text, 19–24px panel and result headings, and 25–36px results headings. No decorative monospace. Body measure stays below 72ch.
+**Display / Body Font:** Host Grotesk (variable, with true italic), loaded through `next/font/google`; system-ui fallback.
+
+**Character:** A precise, slightly warm grotesk. The second headline line switches to the true italic — the one expressive gesture in the type system.
+
+### Hierarchy
+- **Display** (500, clamp(2.6rem, 6.2vw, 5.6rem), 1.02, −0.035em): the hero headline only; second line italic.
+- **Headline** (500, clamp(1.75rem, 3vw, 2.5rem), 1.1): section and results headings.
+- **Title** (500, 20px, 1.3): result titles, step titles.
+- **Body** (400, 16px, 1.6): supporting text; original quotes at 15.5px; measure ≤ 68ch.
+- **UI** (500, 14–15px): buttons, nav links, mode switch, secondary copy beside controls.
+- **Label** (500, 12–13.5px): chips, metadata, tags, notes. Sentence case; no tracked uppercase except the single "Beta" badge.
+- **Code** (400, 12.5px, system monospace): only for the Boolean search phrases shown under "Search phrases" — real query syntax, never decoration.
 
 ## Layout
 
-A 1184px maximum container with 40px desktop and 20px mobile margins. The first viewport pairs the value proposition with the actual input; results continue below as a reading list. At 800px, the page stacks and controls wrap. The task stays primary, without a dashboard sidebar.
+Centered composition. The hero is at least one viewport tall (capped at 940px) with content on a single centered column: beta pill, two-line headline, subcopy, then a 720px composer straddling the rim. Landing sections use a 1120px container with 40px side margins (20px on mobile). The results workspace narrows to an 840px reading column. Sections are separated by 120px (72px mobile). After Run, the hero collapses into a sticky docked bar on wide screens; on narrow screens it scrolls away.
 
 ## Elevation & Depth
 
-Tonal layers and a single border define panels. No panel shadows. Depth is conveyed by the original excerpt's white inset and stage states.
+Depth is atmospheric above the horizon (glow, blur, grain) and physical below it (soft, offset, blue-tinted shadows).
+
+### Shadow Vocabulary
+- **Composer** (`0 30px 60px -24px rgba(6, 24, 110, 0.45), 0 2px 6px rgba(6, 24, 110, 0.12)`): the frosted composer on the rim.
+- **Card** (`0 1px 2px rgba(11, 22, 64, 0.06), 0 18px 40px -24px rgba(20, 50, 170, 0.32)`): result cards and the example card.
+
+### Named Rules
+**The Real Blur Rule.** Backdrop blur is used only where something actually sits over the glow (composer, docked bar, locked preview); never as decoration on flat white.
 
 ## Shapes
 
-8px inputs and primary controls, 6px compact actions, 16px major panels, 100px status pills and round stage dots. The search path is a ruled rail with connected stage dots, not a fake completion gauge.
+Fully rounded pills for chips and buttons (999px), 12px for inputs, 20px for cards, 24px for the composer. The horizon rail is a 1px line with 12px round nodes.
 
 ## Components
 
-Buttons have visible green focus outlines and distinct disabled states. The textarea is the page's main working surface. Results are separated by rules with original words, a fit explanation, then actions. Saved and irrelevant states persist. The animated rail pulses only the actual current stage, with all motion suppressed for reduced motion.
+### Buttons
+- **Primary:** Signal Blue pill, 44px tall, white 15px/500 label with arrow; hover deepens to #1a46db; focus ring 3px Signal Blue at 3px offset (white ring on night).
+- **Light:** white pill on night (header "Try a sample").
+- **Ghost:** transparent with ink text and a 1px line border (Save, Not relevant, Start over).
+
+### Chips
+- **Style:** 32px white-on-frost pills with 1px rgba(11,22,64,.08) border, 13px/500 ink.
+- **Segmented mode switch:** two radio chips inside a frost track; the checked one is white with the card shadow.
+
+### Composer (signature)
+Frosted panel (rgba(238,243,255,.78), 20px backdrop blur, 1px white border, 24px radius, Composer shadow). Visible small label, borderless textarea, example chips with counter, hairline, then toolbar: Reddit source chip, mode switch, and Run research on the right.
+
+### Result Card
+White, 20px radius, Card shadow, 1px line border. Signal numeral, metadata row, title, quote on Frost, fit label pill + reason, hairline, actions (Open original primary; Save / Not relevant ghost). Fictional cards use a dashed #9fb3e6 border. Not-relevant cards collapse to title + Undo at 60% opacity.
+
+### Horizon Rail
+1px line with three round nodes: done = filled Signal with check, active = Signal ring with a soft pulse (the only looping motion in the workspace), pending = hollow line.
 
 ## Do's and Don'ts
 
-- Do preserve a short route from description to Run.
-- Do put sample disclosure beside actions and on every synthetic result.
-- Do retain text and controls when motion is unavailable.
-- Don't add claim metrics, invented posts or illustration-as-proof.
-- Don't make the progress rail imply percentages; identify each selected source's actual status separately.
+### Do:
+- **Do** keep the composer and Run action inside the first viewport on 375×812.
+- **Do** label every fictional example and keep the sample disclosure next to the action.
+- **Do** suppress drift, twinkle, pulse and the dock transition under `prefers-reduced-motion`.
+
+### Don't:
+- **Don't** add invented users, testimonials, logos or metrics; cursor tags are real community names.
+- **Don't** add a second accent hue or gradient text.
+- **Don't** use colored side borders thicker than 1px on cards, quotes or alerts.
+- **Don't** put long reading text on the night surfaces.

@@ -1,13 +1,20 @@
 /*
-THESIS: One description becomes a few conversations worth reviewing; the input is the demonstration.
-OWN-WORLD: Pale green desk, green ink, white writing surface, ruled result list, connected stage rail.
-STORY: Explain what you offer, run a bounded scan, inspect original words and fit, choose whether to join.
-FIRST VIEWPORT: Wordmark above large left-hand sentence; form on the right; sample disclosure next to Run.
-FORM: Conversation desk, grounded candidate four, seed 4652c18f; input-to-list staging, no raster assets.
+THESIS: The horizon is the search. Night above holds unfound conversations; Run carries the composer over the rim and matches surface in daylight below. Refuses the split sentence-left/form-right hero.
+OWN-WORLD: Night #030a24 dome with a cobalt #1f4bff rim fading to ice #dce8ff and white; stars and grain; frosted composer with pill chips and a Signal #2457f5 Run pill; white result cards with blue-tinted shadows; Host Grotesk with an italic second line.
+STORY: Read the promise, describe the business or pick an example, Run; the composer docks; real stages light along the horizon rail; original words, fit and links surface below.
+FIRST VIEWPORT: Night header; centered beta pill; two-line 5.6rem headline; subcopy; 720px composer on the rim with Run at its right edge; r/ cursor tags at the flanks; faded community strip at the pale bottom.
+FORM: User-pinned reference (Luminai hero), not seeded; staging: centered composer hero → docked composer workspace.
 */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  ViewTransition,
+} from "react";
 import Link from "next/link";
 import {
   terminalStages,
@@ -33,6 +40,25 @@ const examples = [
     text: "Our website uptime monitor sends a Slack alert when a site goes down, so small teams notice downtime quickly.",
   },
 ];
+// Mirrors the curated community scopes in lib/discovery.ts.
+const communities = ["caloriecount", "loseit", "shopify", "selfhosted"];
+const demoMatch: Opportunity = {
+  id: "demo",
+  source: "reddit",
+  title: "Is there a calorie app that works from a photo?",
+  text: "I want to keep track of my meals, but entering every ingredient takes too long. Is there an app that can estimate calories from a food photo?",
+  url: null,
+  community: null,
+  publishedAt: null,
+  synthetic: true,
+  reason:
+    "Asks for photo-based calorie logging, which matches a description of an app that estimates calories from a food photo.",
+  evidence: "Is there an app",
+  need: "Solution request",
+  score: 0,
+  saved: false,
+  irrelevant: false,
+};
 const stages = ["Understand", "Search", "Review"] as const;
 const stageIndex: Record<Stage, number> = {
   interpreting: 0,
@@ -66,12 +92,25 @@ function Arrow({ diagonal = false }: { diagonal?: boolean }) {
     </svg>
   );
 }
-function Mark() {
+function Cursor() {
+  return (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+      <path
+        d="M2.5 2.5 15.5 8l-5.6 1.9L8 15.5z"
+        fill="currentColor"
+        stroke="#fff"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function Mark({ size = 28 }: { size?: number }) {
   return (
     <svg
       aria-hidden="true"
-      width="28"
-      height="28"
+      width={size}
+      height={size}
       viewBox="0 0 28 28"
       fill="none"
     >
@@ -115,72 +154,70 @@ function Result({
   item,
   index,
   onFeedback,
-  pending,
+  pending = false,
 }: {
   item: Opportunity;
   index: number;
-  onFeedback: (item: Opportunity, action: "save" | "irrelevant") => void;
-  pending: boolean;
+  onFeedback?: (item: Opportunity, action: "save" | "irrelevant") => void;
+  pending?: boolean;
 }) {
+  // The landing demo renders without feedback and outside the results' article list.
+  const Tag = onFeedback ? "article" : "div";
+  const source = sourceNames[item.source || "reddit"];
   return (
-    <article className={`result ${item.irrelevant ? "muted-result" : ""}`}>
-      <div className="result-index" aria-hidden="true">
+    <Tag
+      className={`result ${item.synthetic ? "is-fictional" : ""} ${item.irrelevant ? "is-dismissed" : ""}`}
+    >
+      <span className="result-index" aria-hidden="true">
         {String(index + 1).padStart(2, "0")}
+      </span>
+      <div className="result-meta">
+        <span className="tag">
+          {item.synthetic ? "Fictional example" : source}
+        </span>
+        {item.synthetic && <span>{source} sample</span>}
+        <span>
+          {item.synthetic ? "No publication date" : when(item.publishedAt)}
+        </span>
+        {item.community && <span>{item.community}</span>}
       </div>
-      <div className="result-content">
-        <div className="result-meta">
-          <span className={`tag ${item.synthetic ? "sample-tag" : ""}`}>
-            {item.synthetic
-              ? "Fictional example"
-              : sourceNames[item.source || "reddit"]}
+      <h3>{item.title || item.evidence}</h3>
+      <blockquote>{item.text || item.title}</blockquote>
+      <div className="fit">
+        <span className="fit-label">
+          {item.need}
+          {!item.synthetic && item.reviewMethod ? ` · ${item.reviewMethod}` : ""}
+        </span>
+        <p>{item.reason}</p>
+      </div>
+      <div className="result-actions">
+        {item.url ? (
+          <a
+            className="original-link"
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open original <Arrow diagonal />
+          </a>
+        ) : (
+          <span className="sample-source">
+            Illustrative text · no original post
           </span>
-          {item.synthetic && (
-            <span>{sourceNames[item.source || "reddit"]} sample</span>
-          )}
-          <span>
-            {item.synthetic ? "No publication date" : when(item.publishedAt)}
-          </span>
-          {item.community && <span>{item.community}</span>}
-        </div>
-        <h3>{item.title || item.evidence}</h3>
-        <blockquote>{item.text || item.title}</blockquote>
-        <div className="fit">
-          <span className="fit-label">
-            {item.need}
-            {!item.synthetic && item.reviewMethod
-              ? ` · ${item.reviewMethod}`
-              : ""}
-          </span>
-          <p>{item.reason}</p>
-        </div>
-        <div className="result-actions">
-          {item.url ? (
-            <a
-              className="original-link"
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open original <Arrow diagonal />
-            </a>
-          ) : (
-            <span className="sample-source">
-              Illustrative text · no original post
-            </span>
-          )}
+        )}
+        {onFeedback && (
           <div className="feedback-actions">
             <button
               aria-pressed={item.saved}
               disabled={pending}
               onClick={() => onFeedback(item, "save")}
-              className={item.saved ? "selected" : ""}
             >
               <svg
                 aria-hidden="true"
-                width="15"
-                height="17"
+                width="14"
+                height="16"
                 viewBox="0 0 16 18"
-                fill="none"
+                fill={item.saved ? "currentColor" : "none"}
                 stroke="currentColor"
                 strokeWidth="1.5"
               >
@@ -196,15 +233,14 @@ function Result({
               {item.irrelevant ? "Undo feedback" : "Not relevant"}
             </button>
           </div>
-        </div>
+        )}
       </div>
-    </article>
+    </Tag>
   );
 }
 
 export default function Home() {
   const [description, setDescription] = useState("");
-  const progressSection = useRef<HTMLElement>(null);
   const [mode, setMode] = useState<Mode>("live");
   const [scan, setScan] = useState<PublicScan | null>(null);
   const [error, setError] = useState("");
@@ -342,13 +378,9 @@ export default function Home() {
           key: runKey.current,
         }),
       });
-      remember(next);
-      requestAnimationFrame(() =>
-        progressSection.current?.scrollIntoView({
-          block: "start",
-          behavior: "auto",
-        }),
-      );
+      // A transition lets the composer morph into its docked position.
+      startTransition(() => remember(next));
+      window.scrollTo({ top: 0 });
       if (terminalStages.includes(next.stage)) resultsHeading.current?.focus();
     } catch (issue) {
       setError(
@@ -375,7 +407,7 @@ export default function Home() {
     if (!freeScanId) return;
     try {
       const previous = await request<PublicScan>(`/api/scans/${freeScanId}`);
-      remember(previous);
+      startTransition(() => remember(previous));
       setMode("live");
       setDescription(previous.description);
       setError("");
@@ -384,6 +416,14 @@ export default function Home() {
         "Free results are retained for 24 hours and are no longer available in this browser.",
       );
     }
+  }
+  function focusComposer(nextMode?: Mode) {
+    if (nextMode && !busy) {
+      setMode(nextMode);
+      runKey.current = null;
+    }
+    window.scrollTo({ top: 0 });
+    document.getElementById("description")?.focus({ preventScroll: true });
   }
   function changeDescription(value: string) {
     setDescription(value);
@@ -413,7 +453,7 @@ export default function Home() {
     }
   }
   function reset() {
-    setScan(null);
+    startTransition(() => setScan(null));
     setError("");
     setPollPaused(false);
     setFilter("all");
@@ -445,111 +485,116 @@ export default function Home() {
               : "";
 
   return (
-    <>
+    <div className={`page ${scan ? "is-docked" : ""}`}>
       <a className="skip-link" href="#description">
         Skip to business description
       </a>
-      <header className="site-header">
-        <Link href="/" className="wordmark" aria-label="Scrapper home">
-          <Mark />
-          <span>
-            scrapper<span className="wordmark-period">.</span>
-          </span>
-        </Link>
-        <span className="header-note">
-          <span className="status-dot" />A conversation discovery prototype
-        </span>
-      </header>
-      <main>
-        <section className="workspace" aria-labelledby="page-heading">
-          <div className="intro">
-            <p className="intro-label">
-              <span className="small-line" />
-              Good opportunities start with listening
-            </p>
-            <h1 id="page-heading">
-              Someone’s asking.
-              <br />
-              <span>You can help.</span>
-            </h1>
-            <p className="intro-copy">
-              Find Reddit conversations about the problem your business solves.
-              Describe it, review the original words, and decide where to join
-              in.
-            </p>
-            <div className="intro-note">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 20 20"
-                width="20"
-                height="20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
+      <section className="hero" aria-labelledby="page-heading">
+        <div className="sky" aria-hidden="true">
+          <span className="beams" />
+          <span className="stars" />
+          <span className="stars stars-twinkle" />
+        </div>
+        <header className="site-header">
+          <Link href="/" className="wordmark" aria-label="Scrapper home">
+            <Mark size={24} />
+            <span>
+              scrapper<span className="wordmark-period">.</span>
+            </span>
+          </Link>
+          {!scan && (
+            <nav className="site-nav" aria-label="Page">
+              <a href="#how">How it works</a>
+              <a href="#example">Example</a>
+            </nav>
+          )}
+          <button
+            type="button"
+            className="light-button"
+            onClick={() => focusComposer("sample")}
+            disabled={busy}
+          >
+            Try a sample
+          </button>
+        </header>
+
+        {scan ? (
+          <h1 id="page-heading" className="sr-only">
+            Someone’s asking. You can help.
+          </h1>
+        ) : (
+          <ViewTransition>
+            <div className="hero-copy">
+              <button
+                type="button"
+                className="beta-pill"
+                onClick={() => focusComposer("live")}
               >
-                <path d="m4 10 4 4 8-8" />
-              </svg>
-              <span>Original words. Clear reasons. You make the call.</span>
+                <span className="beta-badge">Beta</span>
+                <span>
+                  One free Reddit search
+                  <span className="pill-more">, up to three useful results</span>
+                </span>
+                <Arrow />
+              </button>
+              <h1 id="page-heading">
+                Someone’s asking.
+                <br />
+                <em>You can help.</em>
+              </h1>
+              <p className="hero-sub">
+                Find Reddit conversations about the problem your business
+                solves. Describe it, review the original words, and decide
+                where to join in.
+              </p>
             </div>
-          </div>
-          <div className="compose-panel">
-            <div className="panel-heading">
-              <h2>Your business, in a few words.</h2>
-              <span className="tag">
-                {mode === "sample" ? "Sample mode" : "Live search"}
+          </ViewTransition>
+        )}
+
+        <ViewTransition name="composer">
+          <form className="composer" onSubmit={run}>
+            <div className="composer-head">
+              <label htmlFor="description">Tell us what your business does</label>
+              <span id="description-hint">
+                <span className="hint-text">
+                  A specific problem makes a better search ·{" "}
+                </span>
+                {description.length}/1,500
               </span>
             </div>
-            <form onSubmit={run}>
-              <label htmlFor="description" className="field-label">
-                Tell us what your business does
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(event) => changeDescription(event.target.value)}
-                placeholder="We estimate calories from a food photo, so people can track meals without logging every ingredient…"
-                rows={5}
-                minLength={20}
-                maxLength={1500}
-                required
-                disabled={busy}
-                aria-describedby="description-hint"
-              />
-              <div className="input-hint" id="description-hint">
-                <span>A specific problem makes a better search.</span>
-                <span>{description.length}/1,500</span>
-              </div>
-              <div className="examples">
-                <span>Try a description</span>
-                <div>
-                  {examples.map((example) => (
-                    <button
-                      key={example.name}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => changeDescription(example.text)}
-                    >
-                      {example.name}
-                      <span aria-hidden="true"> +</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <fieldset className="mode-options" disabled={busy}>
-                <legend>Search mode</legend>
-                <label>
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="sample"
-                    checked={mode === "sample"}
-                    onChange={() => {
-                      setMode("sample");
-                      runKey.current = null;
-                    }}
-                  />
-                  <span>Sample examples</span>
-                </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(event) => changeDescription(event.target.value)}
+              placeholder="We estimate calories from a food photo, so people can track meals without logging every ingredient…"
+              rows={scan ? 2 : 3}
+              minLength={20}
+              maxLength={1500}
+              required
+              disabled={busy}
+              aria-describedby="description-hint composer-note"
+            />
+            <div className="examples">
+              <span>Try</span>
+              {examples.map((example) => (
+                <button
+                  key={example.name}
+                  type="button"
+                  className="chip"
+                  disabled={busy}
+                  onClick={() => changeDescription(example.text)}
+                >
+                  {example.name}
+                </button>
+              ))}
+            </div>
+            <div className="composer-toolbar">
+              <span className="chip source-chip">
+                <Mark size={15} />
+                Reddit
+              </span>
+              <fieldset className="mode-switch" disabled={busy}>
+                <legend className="sr-only">Search mode</legend>
                 <label>
                   <input
                     type="radio"
@@ -563,69 +608,116 @@ export default function Home() {
                   />
                   <span>Live search</span>
                 </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="mode"
+                    value="sample"
+                    checked={mode === "sample"}
+                    onChange={() => {
+                      setMode("sample");
+                      runKey.current = null;
+                    }}
+                  />
+                  <span>Sample examples</span>
+                </label>
               </fieldset>
-              <div className="run-row">
-                <p>
-                  {mode === "sample"
-                    ? "Fictional examples. No live search or original post links."
-                    : developer
-                      ? "Developer mode: repeated runs enabled. Each job remains cost-capped."
-                      : freeSearchUsed
-                        ? "Your free search has been used. Full research is coming later."
-                        : "One free Reddit search. Up to three useful results."}
-                </p>
-                <button
-                  className="run-button"
-                  disabled={
-                    busy ||
-                    !ready ||
-                    description.trim().length < 20 ||
-                    (mode === "live" && freeSearchUsed && !developer)
-                  }
-                  type="submit"
-                >
-                  {busy
-                    ? "Working"
-                    : mode === "live" && freeSearchUsed && !developer
-                      ? "Free search used"
-                      : "Run research"}
-                  {busy ? (
-                    <span className="button-spinner" aria-hidden="true" />
-                  ) : (
-                    <Arrow />
-                  )}
-                </button>
-              </div>
-              {developer && (
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={async () => {
-                    const response = await fetch("/api/developer", {
-                      method: "DELETE",
-                    });
-                    if (response.ok) window.location.reload();
-                    else setError("Could not leave developer mode. Try again.");
-                  }}
-                >
-                  Leave developer mode
-                </button>
-              )}
-              {!developer &&
-                freeSearchUsed &&
-                freeScanId &&
-                (!scan || scan.mode !== "live") && (
-                  <button
-                    type="button"
-                    onClick={() => void restoreFreeResults()}
-                  >
-                    View your free results
-                  </button>
+              <button
+                className="run-button"
+                disabled={
+                  busy ||
+                  !ready ||
+                  description.trim().length < 20 ||
+                  (mode === "live" && freeSearchUsed && !developer)
+                }
+                type="submit"
+              >
+                {busy
+                  ? "Working"
+                  : mode === "live" && freeSearchUsed && !developer
+                    ? "Free search used"
+                    : "Run research"}
+                {busy ? (
+                  <span className="button-spinner" aria-hidden="true" />
+                ) : (
+                  <Arrow />
                 )}
-            </form>
-          </div>
-        </section>
+              </button>
+            </div>
+          </form>
+        </ViewTransition>
+        <div className="composer-note" id="composer-note">
+          <p>
+            {mode === "sample"
+              ? "Fictional examples. No live search or original post links."
+              : developer
+                ? "Developer mode: repeated runs enabled. Each job remains cost-capped."
+                : freeSearchUsed
+                  ? "Your free search has been used. Full research is coming later."
+                  : "One free Reddit search. Up to three useful results."}
+          </p>
+          {developer && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={async () => {
+                const response = await fetch("/api/developer", {
+                  method: "DELETE",
+                });
+                if (response.ok) window.location.reload();
+                else setError("Could not leave developer mode. Try again.");
+              }}
+            >
+              Leave developer mode
+            </button>
+          )}
+          {!developer &&
+            freeSearchUsed &&
+            freeScanId &&
+            (!scan || scan.mode !== "live") && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => void restoreFreeResults()}
+            >
+              View your free results <Arrow />
+            </button>
+          )}
+        </div>
 
+        {!scan && (
+          <>
+            <div className="cursor-tags" aria-hidden="true">
+              <span className="cursor-tag tag-a">
+                <Cursor />
+                <span>r/loseit</span>
+              </span>
+              <span className="cursor-tag tag-b">
+                <Cursor />
+                <span>r/shopify</span>
+              </span>
+              <span className="cursor-tag tag-c">
+                <Cursor />
+                <span>r/selfhosted</span>
+              </span>
+            </div>
+            <div className="community-strip">
+              <p>
+                Searches curated communities where a category is known, and
+                broader Reddit otherwise.
+              </p>
+              <ul>
+                {communities.map((name) => (
+                  <li key={name}>r/{name}</li>
+                ))}
+                <li>+ broader Reddit</li>
+              </ul>
+            </div>
+          </>
+        )}
+      </section>
+
+      <main>
         {error && (
           <div className="error-message" role="alert">
             <p>{error}</p>
@@ -644,22 +736,23 @@ export default function Home() {
 
         {scan && (
           <section
-            ref={progressSection}
             className="scan-section"
             aria-label="Search progress and results"
           >
             <div className={`progress-rail ${busy ? "is-running" : ""}`}>
-              {stages.map((label, index) => (
-                <div
-                  key={label}
-                  className={`stage ${index < currentStep ? "done" : ""} ${index === currentStep ? "active" : ""}`}
-                >
-                  <span className="stage-node" aria-hidden="true">
-                    {index < currentStep ? "✓" : index + 1}
-                  </span>
-                  <span>{label}</span>
-                </div>
-              ))}
+              <ol>
+                {stages.map((label, index) => (
+                  <li
+                    key={label}
+                    className={`stage ${index < currentStep ? "done" : ""} ${index === currentStep ? "active" : ""}`}
+                  >
+                    <span className="stage-node" aria-hidden="true">
+                      {index < currentStep ? "✓" : index + 1}
+                    </span>
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ol>
               <span className="rail-mode">
                 {scan.mode === "sample"
                   ? "Sample examples"
@@ -668,6 +761,20 @@ export default function Home() {
                       .join(" + ")}
               </span>
             </div>
+            {busy && (
+              <div className="working-state">
+                <p role="status" aria-live="polite">
+                  {pollPaused
+                    ? "Search paused · resume when connected"
+                    : status}
+                </p>
+                <span>
+                  {scan.business
+                    ? `Using product terms from your description`
+                    : "Your input stays here while we work."}
+                </span>
+              </div>
+            )}
             {!!scan.sourceRuns?.length && (
               <ul className="source-progress" aria-label="Source progress">
                 {scan.sourceRuns.map((run) => (
@@ -692,85 +799,77 @@ export default function Home() {
                 ))}
               </ul>
             )}
-            {busy && (
-              <div className="working-state">
-                <div className="working-line" aria-hidden="true" />
-                <p role="status" aria-live="polite">
-                  {pollPaused
-                    ? "Search paused · resume when connected"
-                    : status}
-                </p>
-                <span>
-                  {scan.business
-                    ? `Using product terms from your description`
-                    : "Your input stays here while we work."}
-                </span>
-              </div>
-            )}
-            {scan.business?.communities?.length ? (
-              <p className="sample-disclosure">
-                {scan.mode === "sample"
-                  ? "Example community scope"
-                  : finished
-                    ? "Searched these communities"
-                    : "Searching these communities"}
-                :{" "}
-                {scan.business.communities
-                  .map((name) => `r/${name}`)
-                  .join(", ")}
-                . Community membership alone does not establish fit.
-              </p>
-            ) : scan.business ? (
-              <p className="sample-disclosure">
-                {scan.mode === "sample"
-                  ? "Example broader Reddit scope"
-                  : finished
-                    ? "Searched broader Reddit"
-                    : "Searching broader Reddit"}
-                : no curated community is available for this category.
-              </p>
-            ) : null}
             {scan.business && (
-              <details className="strategy">
-                <summary>
-                  Search phrases <span>{scan.business.category}</span>
-                </summary>
-                <div>
-                  {(scan.sourceRuns?.length
-                    ? scan.sourceRuns
-                    : [
-                        {
-                          source: "reddit" as Source,
-                          queries: scan.business.queries,
-                        },
-                      ]
-                  )
-                    .flatMap((run) =>
-                      (run.queries || []).map(
-                        (query) => `${sourceNames[run.source]}: ${query}`,
-                      ),
-                    )
-                    .map((query) => (
-                      <span key={query}>{query}</span>
-                    ))}
-                </div>
-                {scan.sourceRuns?.flatMap((run) =>
-                  (run.queryPlans || []).map((plan) => (
-                    <p key={`${run.source}:${plan.phrase}`}>
-                      <strong>{plan.phrase}</strong> — {plan.rationale}
-                    </p>
-                  )),
-                )}
+              <div className="scope">
                 <p>
-                  Reddit searches the past year. Category and problem phrases
-                  find candidates, then context and fit checks qualify them.
-                  {scan.modelReview === "Gemini + keyword rules"
-                    ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
-                    : " Keyword rules check the returned context."}{" "}
-                  Dates show the age of each discussion. A match does not prove
-                  purchase intent.
+                  {scan.business.communities?.length ? (
+                    <>
+                      {scan.mode === "sample"
+                        ? "Example community scope"
+                        : finished
+                          ? "Searched these communities"
+                          : "Searching these communities"}
+                      :{" "}
+                      {scan.business.communities.map((name) => (
+                        <span className="community" key={name}>
+                          r/{name}
+                        </span>
+                      ))}{" "}
+                      Community membership alone does not establish fit.
+                    </>
+                  ) : (
+                    <>
+                      {scan.mode === "sample"
+                        ? "Example broader Reddit scope"
+                        : finished
+                          ? "Searched broader Reddit"
+                          : "Searching broader Reddit"}
+                      : no curated community is available for this category.
+                    </>
+                  )}
                 </p>
-              </details>
+                <details className="strategy">
+                  <summary>
+                    Search phrases <span>{scan.business.category}</span>
+                  </summary>
+                  <div className="queries">
+                    {(scan.sourceRuns?.length
+                      ? scan.sourceRuns
+                      : [
+                          {
+                            source: "reddit" as Source,
+                            queries: scan.business.queries,
+                          },
+                        ]
+                    )
+                      .flatMap((run) =>
+                        (run.queries || []).map(
+                          (query) => `${sourceNames[run.source]}: ${query}`,
+                        ),
+                      )
+                      .map((query) => (
+                        <code key={query}>{query}</code>
+                      ))}
+                  </div>
+                  {scan.sourceRuns?.flatMap((run) =>
+                    (run.queryPlans || []).map((plan) => (
+                      <p key={`${run.source}:${plan.phrase}`}>
+                        <strong>{plan.phrase}</strong> — {plan.rationale}
+                      </p>
+                    )),
+                  )}
+                  <p>
+                    Reddit searches the past year. Category and problem
+                    phrases find candidates, then context and fit checks
+                    qualify them.
+                    {scan.modelReview === "Gemini + keyword rules"
+                      ? " Gemini assessed up to five candidates; remaining candidates use keyword rules."
+                      : " Keyword rules check the returned context."}{" "}
+                    Dates show the age of each discussion. A match does not
+                    prove purchase intent.
+                  </p>
+                </details>
+              </div>
             )}
             {finished && (
               <>
@@ -793,7 +892,7 @@ export default function Home() {
                             : "No suitable matches in this search."}
                     </h2>
                   </div>
-                  <button className="text-button" onClick={reset}>
+                  <button className="ghost-button" onClick={reset}>
                     Start over <Arrow />
                   </button>
                 </div>
@@ -833,31 +932,22 @@ export default function Home() {
                     <span>Ranked by fit, not purchase probability</span>
                   </div>
                 )}
-                {visibleResults.map((item, index) => (
-                  <Result
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    onFeedback={feedback}
-                    pending={pendingFeedback}
-                  />
-                ))}
+                <div className="results">
+                  {visibleResults.map((item, index) => (
+                    <Result
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      onFeedback={feedback}
+                      pending={pendingFeedback}
+                    />
+                  ))}
+                </div>
                 {(scan.lockedCount || 0) > 0 && filter === "all" && (
                   <section
                     className="report-preview"
                     aria-label="Additional results preview"
                   >
-                    <h3>
-                      {scan.matchCount} matches found. Your first three are
-                      above.
-                    </h3>
-                    <p>
-                      {scan.lockedCount} additional{" "}
-                      {scan.lockedCount === 1 ? "match is" : "matches are"}{" "}
-                      retained in this research report. Full-report access is
-                      planned; payments and unlocking are not available in this
-                      release.
-                    </p>
                     <div className="locked-previews" aria-hidden="true">
                       {Array.from(
                         { length: Math.min(3, scan.lockedCount || 0) },
@@ -870,16 +960,33 @@ export default function Home() {
                         ),
                       )}
                     </div>
-                    <small>
-                      Hidden titles, text and original links stay on the server.
-                    </small>
+                    <div className="report-copy">
+                      <h3>
+                        {scan.matchCount} matches found. Your first three are
+                        above.
+                      </h3>
+                      <p>
+                        {scan.lockedCount} additional{" "}
+                        {scan.lockedCount === 1 ? "match is" : "matches are"}{" "}
+                        retained in this research report. Full-report access is
+                        planned; payments and unlocking are not available in
+                        this release.
+                      </p>
+                      <small>
+                        Hidden titles, text and original links stay on the
+                        server.
+                      </small>
+                    </div>
                   </section>
                 )}
                 {scan.results.length > 0 && !visibleResults.length && (
                   <div className="empty-state">
                     <h3>Your shortlist starts here.</h3>
                     <p>Save a result and it will appear in this view.</p>
-                    <button onClick={() => setFilter("all")}>
+                    <button
+                      className="ghost-button"
+                      onClick={() => setFilter("all")}
+                    >
                       View all results
                     </button>
                   </div>
@@ -907,7 +1014,7 @@ export default function Home() {
                               : "No returned record passed the context-and-fit checks. Describe the problem you solve more specifically, then run another bounded search."}
                     </p>
                     {(!scan.free || scan.developer) && (
-                      <button onClick={reset}>
+                      <button className="ghost-button" onClick={reset}>
                         Refine the description <Arrow />
                       </button>
                     )}
@@ -931,30 +1038,70 @@ export default function Home() {
         )}
 
         {!scan && (
-          <section className="how-it-works" aria-label="How it works">
-            <div>
-              <span>Tell us what you solve.</span>
-              <p>A few sentences, with the details that matter.</p>
-            </div>
-            <Arrow />
-            <div>
-              <span>Find a relevant request.</span>
-              <p>Look for a real need and a reason you fit.</p>
-            </div>
-            <Arrow />
-            <div>
-              <span>Join as yourself.</span>
-              <p>Open the thread and disclose your affiliation.</p>
-            </div>
-          </section>
+          <>
+            <section id="how" className="steps" aria-labelledby="how-heading">
+              <h2 id="how-heading">Listen first, then be useful.</h2>
+              <ol>
+                <li>
+                  <span className="step-node" aria-hidden="true" />
+                  <h3>Tell us what you solve.</h3>
+                  <p>A few sentences, with the details that matter.</p>
+                </li>
+                <li>
+                  <span className="step-node" aria-hidden="true" />
+                  <h3>Find a relevant request.</h3>
+                  <p>Look for a real need and a reason you fit.</p>
+                </li>
+                <li>
+                  <span className="step-node" aria-hidden="true" />
+                  <h3>Join as yourself.</h3>
+                  <p>Open the thread and disclose your affiliation.</p>
+                </li>
+              </ol>
+            </section>
+            <section
+              id="example"
+              className="example"
+              aria-labelledby="example-heading"
+            >
+              <div className="example-copy">
+                <h2 id="example-heading">What a match looks like.</h2>
+                <p>
+                  Every match shows the original words, a reason tied to your
+                  description, and a link to the thread, so you decide whether
+                  and how to reply.
+                </p>
+                <p className="example-note">
+                  This example is fictional and has no original post.
+                </p>
+              </div>
+              <Result item={demoMatch} index={0} />
+            </section>
+          </>
         )}
       </main>
-      <footer>
-        <span>
-          scrapper. <span className="footer-sub">Listen first. Be useful.</span>
-        </span>
-        <span>Search beta · Human replies only</span>
+
+      <footer className="site-footer">
+        {!scan && (
+          <div className="footer-cta">
+            <h2>Find a conversation worth joining.</h2>
+            <button
+              type="button"
+              className="run-button"
+              onClick={() => focusComposer()}
+            >
+              Describe your business <Arrow />
+            </button>
+          </div>
+        )}
+        <div className="footer-line">
+          <span>
+            scrapper.{" "}
+            <span className="footer-sub">Listen first. Be useful.</span>
+          </span>
+          <span>Search beta · Human replies only</span>
+        </div>
       </footer>
-    </>
+    </div>
   );
 }
