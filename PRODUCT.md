@@ -32,7 +32,7 @@ Project name Scrapper platform. Plain factual language, very simple landing dire
 
 ## Evidence on Hand
 
-README.md, docs/research.md, docs/mvp-plan.md. A single authenticated Apify validation cost $0.024 and timed out, returning one community record and no qualified conversations. One Gemini query-drafting request passed using 96 input and 36 output tokens. No testimonials, customer outcomes or commercial permission. Synthetic demonstration content must be unmistakable and have no invented original links.
+README.md, docs/research.md, docs/mvp-plan.md, docs/validation.md. Three explicitly authorized Apify attempts reported $0.092 total charges. The corrected ten-item check succeeded with seven real posts containing text, original URLs and dates; all normalized, but none qualified for the supplied business. Useful query precision remains unproven. One separate Gemini query-drafting generation passed using 96 input and 36 output tokens; service wiring and fallback are tested with an injected model. No testimonials, customer outcomes or commercial permission. Synthetic demonstration content must be unmistakable and have no invented original links.
 
 ## Product Principles
 

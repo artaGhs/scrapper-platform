@@ -21,6 +21,10 @@ async function main() {
   let scan = existsSync(marker)
     ? db.get(readFileSync(marker, "utf8").trim(), "local-validation")
     : null;
+  if (existsSync(marker) && !scan)
+    throw new Error(
+      "The recorded validation expired or is unavailable. A second job will not be started.",
+    );
   if (!scan) {
     scan = db.create(
       "local-validation",

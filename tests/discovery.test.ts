@@ -131,3 +131,13 @@ test("promotional content is filtered and source instructions are never executed
     0,
   );
 });
+
+test("actor community records cannot masquerade as discussion results", () => {
+  const record = {
+    dataType: "community",
+    url: "https://www.reddit.com/r/test/comments/abc/question/",
+    title: "Looking for an uptime monitor",
+    createdAt: new Date().toISOString(),
+  };
+  assert.equal(normalize([record]).length, 0);
+});

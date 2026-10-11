@@ -1,4 +1,10 @@
-import { AppError, MAX_ITEMS, PROVIDER_TIMEOUT_SECONDS } from "./config";
+import {
+  AppError,
+  MAX_ITEMS,
+  MIN_PROVIDER_ITEMS,
+  MIN_PROVIDER_BUDGET_USD,
+  PROVIDER_TIMEOUT_SECONDS,
+} from "./config";
 import type { Business } from "./types";
 
 type Run = {
@@ -67,10 +73,22 @@ export class RedditProvider {
     }
   }
   async start(business: Business): Promise<Run> {
+    if (!Number.isFinite(this.itemLimit) || this.itemLimit < MIN_PROVIDER_ITEMS)
+      throw new AppError(
+        "This source requires at least 10 requested records. No provider job was started.",
+      );
+    if (
+      !Number.isFinite(this.budget) ||
+      this.budget < MIN_PROVIDER_BUDGET_USD ||
+      this.budget > 1
+    )
+      throw new AppError(
+        "This source needs a charge cap of at least $0.04 and at most $1. No provider job was started.",
+      );
     const limit = Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit)));
     const params = new URLSearchParams({
       timeout: String(PROVIDER_TIMEOUT_SECONDS),
-      memory: "256",
+      memory: "2048",
       maxItems: String(limit),
       maxTotalChargeUsd: String(this.budget),
     });
@@ -80,7 +98,11 @@ export class RedditProvider {
         body: JSON.stringify({
           searches: business.queries.slice(0, 3),
           startUrls: [],
+          ignoreStartUrls: true,
           searchPosts: true,
+          includeMediaLinks: false,
+          navigationTimeout: 20,
+          scrollTimeout: 10,
           searchComments: false,
           searchCommunities: false,
           searchUsers: false,
@@ -105,11 +127,14 @@ export class RedditProvider {
   }
   async items(datasetId: string): Promise<unknown[]> {
     const result = await this.request(
-      `datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${MAX_ITEMS}`,
+      `datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit)))}`,
     );
     if (!Array.isArray(result))
       throw new AppError("The source returned an unexpected dataset.", 502);
-    return result.slice(0, MAX_ITEMS);
+    return result.slice(
+      0,
+      Math.max(1, Math.min(MAX_ITEMS, Math.floor(this.itemLimit))),
+    );
   }
   async abort(runId: string): Promise<void> {
     await this.request(`actor-runs/${encodeURIComponent(runId)}/abort`, {

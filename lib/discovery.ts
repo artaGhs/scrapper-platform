@@ -136,12 +136,30 @@ function publication(value: unknown): string | null {
     return null;
   return new Date(ms).toISOString();
 }
+export function isDiscussionRecord(record: unknown): boolean {
+  if (!record || typeof record !== "object") return false;
+  const row = record as Record<string, unknown>;
+  if (
+    typeof row.dataType === "string" &&
+    !["post", "comment"].includes(row.dataType)
+  )
+    return false;
+  return (
+    !!originalUrl(row.url) &&
+    [row.title, row.body, row.text].some(
+      (value) =>
+        typeof value === "string" &&
+        value.trim().length > 0 &&
+        !["[removed]", "[deleted]"].includes(value),
+    )
+  );
+}
 export function normalize(records: unknown[], now = Date.now()): SourceItem[] {
   const seen = new Set<string>();
   const texts = new Set<string>();
   const output: SourceItem[] = [];
   for (const record of records.slice(0, MAX_ITEMS)) {
-    if (!record || typeof record !== "object") continue;
+    if (!isDiscussionRecord(record)) continue;
     const row = record as Record<string, unknown>;
     const url = originalUrl(row.url);
     const title = typeof row.title === "string" ? row.title.slice(0, 300) : "";

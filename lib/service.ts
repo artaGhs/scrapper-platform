@@ -1,5 +1,5 @@
 import { AppError, liveConfig, SCAN_TIMEOUT_MS } from "./config";
-import { interpret, normalize, rank } from "./discovery";
+import { interpret, isDiscussionRecord, normalize, rank } from "./discovery";
 import { draftQueries } from "./model";
 import { RedditProvider } from "./provider";
 import { sampleItems } from "./samples";
@@ -17,6 +17,7 @@ export async function advance(
   owner: string,
   repository?: ScanRepository,
   injectedProvider?: Provider,
+  injectedDraft?: typeof draftQueries,
 ): Promise<Scan> {
   const db = repository || (await store());
   const current = await db.get(id, owner);
@@ -62,10 +63,10 @@ export async function advance(
         if (
           scan.mode === "live" &&
           process.env.GEMINI_API_KEY &&
-          !injectedProvider
+          (!injectedProvider || injectedDraft)
         ) {
           try {
-            scan.business = await draftQueries(
+            scan.business = await (injectedDraft || draftQueries)(
               scan.business,
               process.env.GEMINI_API_KEY,
             );
@@ -105,6 +106,15 @@ export async function advance(
           scan.retrieved = raw.length;
           scan.items = normalize(raw);
           scan.partial = run.status !== "SUCCEEDED";
+          const discussionRecords = raw.filter(isDiscussionRecord).length;
+          if (discussionRecords === 0 && (scan.partial || raw.length > 0)) {
+            throw new AppError(
+              scan.partial
+                ? "The source job stopped before returning usable discussion text and links. This is a source failure, not a confirmed empty search."
+                : "The source returned records without usable discussion text and links. This is a source failure, not a confirmed empty search.",
+              502,
+            );
+          }
           if (scan.partial)
             scan.notice =
               "The source job ended before completing. These results use only the records actually returned.";

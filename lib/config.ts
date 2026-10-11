@@ -1,4 +1,6 @@
 export const MAX_ITEMS = 50;
+export const MIN_PROVIDER_ITEMS = 10;
+export const MIN_PROVIDER_BUDGET_USD = 0.04;
 export const SCAN_TIMEOUT_MS = 210_000;
 export const PROVIDER_TIMEOUT_SECONDS = 180;
 export const RETENTION_MS = 24 * 60 * 60_000;
@@ -21,14 +23,14 @@ export function liveConfig() {
     );
   if (
     !Number.isFinite(budget) ||
-    budget <= 0 ||
+    budget < MIN_PROVIDER_BUDGET_USD ||
     budget > 1 ||
     !Number.isFinite(hourlyBudget) ||
     hourlyBudget <= 0 ||
     hourlyBudget > 10
   ) {
     throw new AppError(
-      "Live search needs an explicit server budget: LIVE_SCAN_BUDGET_USD must be above 0 and at most 1; LIVE_HOURLY_BUDGET_USD must be above 0 and at most 10. No provider job was started.",
+      "Live search needs an explicit server budget: LIVE_SCAN_BUDGET_USD must be at least 0.04 and at most 1; LIVE_HOURLY_BUDGET_USD must be above 0 and at most 10. No provider job was started.",
       503,
     );
   }
